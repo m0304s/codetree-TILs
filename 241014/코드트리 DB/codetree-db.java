@@ -59,6 +59,12 @@ public class Main {
                     dbNameSet.remove(name);
                     ArrayList<String> itemList = dbMap.get(price);
                     itemList.remove(name);
+
+                    //상품 제거 후 동일한 값을 가지는 상품이 없을 경우 dbMap.keySet()에서도 제거
+                    if(itemList.size() == 0){
+                        dbMap.remove(price);
+                    }
+                    System.out.println(price);
                 }
             }else if(input[0].equals("rank")){
                 int rank = Integer.parseInt(input[1]);
