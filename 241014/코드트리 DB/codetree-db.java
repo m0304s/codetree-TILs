@@ -6,102 +6,62 @@ public class Main {
     static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
 
     static int Q;
-    static TreeMap<Integer,ArrayList<String>> dbMap = new TreeMap<>();
-    static Set<String> dbNameSet = new HashSet<>();
-    static Map<String,Integer> itemMap = new HashMap<>();
+    static TreeMap<Integer, String> dbMap = new TreeMap<>(); // 가격-상품 저장
+    static Map<String, Integer> itemMap = new HashMap<>(); // 상품-가격 저장
 
     public static void main(String[] args) throws IOException {
         Q = Integer.parseInt(br.readLine());
-        for(int q=1;q<=Q;q++){
+        for (int q = 1; q <= Q; q++) {
             String[] input = br.readLine().split(" ");
-            if(input[0].equals("init")){
+            if (input[0].equals("init")) {
                 dbMap.clear();
-                dbNameSet.clear();
                 itemMap.clear();
-            }else if(input[0].equals("insert")){
+            } else if (input[0].equals("insert")) {
                 String name = input[1];
                 int value = Integer.parseInt(input[2]);
 
-                //value 값을 가진 상품 리스트
-                if(dbNameSet.contains(name)){
+                if (itemMap.containsKey(name) || dbMap.containsKey(value)) {
+                    // 이름이나 가격 중복 시 0 출력
                     System.out.println("0");
-                }else{
-                    if(dbMap.get(value) == null){
-                        ArrayList<String> itemList = new ArrayList<>();
-                        itemList.add(name);
-                        dbMap.put(value,itemList);
-                        dbNameSet.add(name);
-                        itemMap.put(name,value);
-                        System.out.println("1");
-                    }else if(dbMap.keySet().contains(value)){
-                        System.out.println("0");
-                    }else{
-                        ArrayList<String> itemList = dbMap.get(value);
-
-                        if(itemList.contains(name)){
-                            System.out.println("0");
-                        }else{
-                            itemList.add(name);
-                            dbNameSet.add(name);
-                            itemMap.put(name,value);
-                            System.out.println("1");
-                        }
-                    }
+                } else {
+                    dbMap.put(value, name); // 가격에 해당하는 상품 추가
+                    itemMap.put(name, value); // 상품에 해당하는 가격 추가
+                    System.out.println("1");
                 }
-            }else if(input[0].equals("delete")){
+            } else if (input[0].equals("delete")) {
                 String name = input[1];
-                if(!dbNameSet.contains(name)){
-                    //같은 이름을 가지는 Row가 없으면 0출력
+                if (!itemMap.containsKey(name)) {
+                    // 이름이 없으면 0 출력
                     System.out.println("0");
-                }else{
+                } else {
                     int price = itemMap.get(name);
-                    itemMap.remove(name);
-                    dbNameSet.remove(name);
-                    ArrayList<String> itemList = dbMap.get(price);
-                    itemList.remove(name);
-
-                    //상품 제거 후 동일한 값을 가지는 상품이 없을 경우 dbMap.keySet()에서도 제거
-                    if(itemList.size() == 0){
-                        dbMap.remove(price);
-                    }
+                    itemMap.remove(name); // 상품 제거
+                    dbMap.remove(price);  // 가격에서 해당 상품 제거
                     System.out.println(price);
                 }
-            }else if(input[0].equals("rank")){
+            } else if (input[0].equals("rank")) {
                 int rank = Integer.parseInt(input[1]);
-                //만약 row의 수가 k보다 작을 경우 None 출력
-                // K번째로 작은 value 가진 Row의 Name 출력
-                Set<Integer> keySet = dbMap.keySet();
-                int totalCnt = 0;
-                for (Integer i : keySet) {
-                    totalCnt+=dbMap.get(i).size();
-                }
-                if(totalCnt<rank){
+
+                // 전체 아이템 개수 확인
+                if (dbMap.size() < rank) {
                     System.out.println("None");
-                }else{
+                } else {
                     int cnt = 0;
-                    for(Integer i : keySet){
-                        boolean stop = false;
-                        ArrayList<String> itemList = dbMap.get(i);
-                        for (String s : itemList) {
-                            cnt++;
-                            if(cnt==rank){
-                                System.out.println(s);
-                                stop = true;
-                                break;
-                            }
+                    for (Map.Entry<Integer, String> entry : dbMap.entrySet()) {
+                        cnt++;
+                        if (cnt == rank) {
+                            System.out.println(entry.getValue());
+                            break;
                         }
-                        if(stop) break;
                     }
                 }
-            }else if(input[0].equals("sum")){
+            } else if (input[0].equals("sum")) {
                 int sum = 0;
                 int k = Integer.parseInt(input[1]);
-                Set<Integer> keySet = dbMap.keySet();
-                for (Integer i : keySet) {
-                    if(i>k) break;
 
-                    ArrayList<String> itemList = dbMap.get(i);
-                    sum+=(itemList.size())*i;
+                for (Map.Entry<Integer, String> entry : dbMap.entrySet()) {
+                    if (entry.getKey() > k) break; // 가격이 k를 초과하면 종료
+                    sum += entry.getKey(); // 가격을 더함
                 }
                 System.out.println(sum);
             }
