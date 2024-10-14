@@ -17,7 +17,7 @@ public class Main {
             if (input[0].equals("init")) {
                 dbMap.clear();
                 itemMap.clear();
-                totalSum = 0; // 초기화 시 누적합도 초기화
+                totalSum = 0;  // 초기화 시 누적합도 초기화
             } else if (input[0].equals("insert")) {
                 String name = input[1];
                 int value = Integer.parseInt(input[2]);
@@ -61,7 +61,7 @@ public class Main {
                 }
             } else if (input[0].equals("sum")) {
                 int k = Integer.parseInt(input[1]);
-                long sum = totalSum;  // 먼저 전체 가격의 누적합을 사용
+                long sum = totalSum;  // 전체 누적합을 미리 계산
 
                 // k보다 큰 가격들을 제외
                 NavigableMap<Integer, String> overPriceMap = dbMap.tailMap(k, false);
