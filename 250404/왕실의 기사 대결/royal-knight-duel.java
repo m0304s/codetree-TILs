@@ -1,7 +1,7 @@
 import java.io.*;
 import java.util.*;
 
-public class 왕실의기사대결 {
+public class Main {
 	//상 우 하 좌
 	static final int [] dx = {-1,0,1,0};
 	static final int [] dy = {0,1,0,-1};
