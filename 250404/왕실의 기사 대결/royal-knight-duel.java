@@ -1,7 +1,7 @@
 import java.io.*;
 import java.util.*;
 
-public class Main {
+public class 왕실의기사대결 {
 	//상 우 하 좌
 	static final int [] dx = {-1,0,1,0};
 	static final int [] dy = {0,1,0,-1};
@@ -46,7 +46,8 @@ public class Main {
 			String [] tokens = br.readLine().split(" ");
 			int soldierNum = Integer.parseInt(tokens[0]);
 			int dir = Integer.parseInt(tokens[1]);
-
+			
+			if(!soldierMap.containsKey(soldierNum)) continue;
 			if(checkCanMove(soldierNum,dir)) {
 				//병사 이동
 				move(soldierNum,dir,false);
