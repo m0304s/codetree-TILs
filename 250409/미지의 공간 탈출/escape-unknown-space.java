@@ -103,6 +103,7 @@ public class Main {
 
     static int simulateAndBFS(Node startPoint, Node endPoint, int startTime){
         Queue<Node> queue = new ArrayDeque<>();
+        if(startPoint == null) return -1;
         queue.add(startPoint);
 
         // 방문 여부 체크 (N x N)
@@ -203,6 +204,7 @@ public class Main {
         //타임머신 출발 위치 체크
         State timeMachine = findStartPoint();
         State endPoint = findEndPoint();
+        if(endPoint == null) return -1;
         int minTime = move(timeMachine,endPoint);
         return minTime;
     }
@@ -382,7 +384,7 @@ public class Main {
         }
 
         if (prev == null) {
-            throw new IllegalStateException("탈출구(0)를 찾을 수 없습니다.");
+            return null;
         }
 
         int relX = prev.x - startPoint.x;
