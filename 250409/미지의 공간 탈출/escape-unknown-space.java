@@ -14,12 +14,8 @@ public class Main {
 
     public static void main(String[] args) throws IOException{
         init();
-//        debug();
         int firstTime = phase1();
         int secondTime = phase2(firstTime);
-
-//        System.out.println(firstTime);
-//        System.out.println(secondTime);
 
         if (firstTime == -1 || secondTime == -1) {
             System.out.println(-1);
@@ -29,11 +25,9 @@ public class Main {
     }
 
     static int phase2(int firstTime) {
-        //firstTime까지 각 시간 이상 현상 전파
         int[] dx = {0, 0, 1, -1};
         int[] dy = {1, -1, 0, 0};
 
-        // 시간 1부터 firstTime까지 시뮬레이션
         for (int time = 1; time <= firstTime; time++) {
             for (TimeMorphy tm : timeMorphies) {
                 if (!tm.status)
@@ -118,33 +112,28 @@ public class Main {
         int[] dx = {0, 0, 1, -1};
         int[] dy = {1, -1, 0, 0};
 
-        int t = startTime;
+        int t = 0;
 
         while (t < 10000) {
             t++;
 
             for (TimeMorphy tm : timeMorphies) {
                 if (!tm.status) continue;               // 이미 사망한 경우 건너뜀
-                if (t % tm.v != 0) continue;            // 이동 주기가 아니면 건너뜀
+                if ((t+startTime+1) % tm.v != 0) continue;            // 이동 주기가 아니면 건너뜀
 
                 int nx = tm.x + dx[tm.d];
                 int ny = tm.y + dy[tm.d];
 
                 // 이동 가능 여부 확인
-                // (범위 내 && unknownMap[nx][ny] == 0)
                 if (!inRangeAtUnknownMap(nx, ny) || unknownMap[nx][ny] != 0) {
                     tm.status = false; // 사망 처리
                 } else {
-                    // 정상적으로 이동
                     tm.x = nx;
                     tm.y = ny;
-                    // 이동한 칸을 VIRUS로 표시
                     unknownMap[nx][ny] = VIRUS;
                 }
             }
-
-            /* 2) BFS 확장 */
-            // 이번 시간에 확장할 노드 수만큼만 처리(동시에 이동)
+            
             int size = queue.size();
             for (int i = 0; i < size; i++) {
                 Node cur = queue.poll();
@@ -245,6 +234,7 @@ public class Main {
                     ny = changedPoint.point.y;
                     face = changedPoint.face;
                 }
+                if(!inRangeAtTimeWall(nx, ny)) continue;
                 if(visited[face][nx][ny] || timeWall[face][nx][ny] == 1) continue;
 
                 visited[face][nx][ny] = true;
@@ -264,8 +254,8 @@ public class Main {
      */
     private static State changePoint(int x, int y, int face, int d) {
         int newFace = 0;
-        int nx = 0;
-        int ny = 0;
+        int nx = -1;
+        int ny = -1;
 
         switch (face) {
             case 0: // ─ 동쪽 면
