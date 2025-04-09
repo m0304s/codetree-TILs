@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.util.*;
 
@@ -16,6 +17,9 @@ public class Main {
 //        debug();
         int firstTime = phase1();
         int secondTime = phase2(firstTime);
+
+//        System.out.println(firstTime);
+//        System.out.println(secondTime);
 
         if (firstTime == -1 || secondTime == -1) {
             System.out.println(-1);
@@ -268,23 +272,23 @@ public class Main {
                 if (d == 0) {
                     newFace = 3; ny = 0; nx = x;
                 } else if (d == 1) {
-                    newFace = 2; nx = 0; ny = (M-1);
+                    newFace = 2; nx = x; ny = (M-1);
                 } else if (d == 2) {
 
                 } else {
-                    newFace = 4; nx = (M-1) - x; ny = (M-1);
+                    newFace = 4; nx = (M-1) - y; ny = (M-1);
                 }
                 break;
 
             case 1: // ─ 서쪽 면
                 if (d == 0) {
-                    newFace = 2; nx = x;    ny = 0;
+                    newFace = 2; nx = x; ny = 0;
                 } else if (d == 1) {
                     newFace = 3; nx = x; ny = M-1;
                 } else if (d == 2) {
 
                 } else {
-                    newFace = 4; nx = y; ny = x;
+                    newFace = 4; nx = y; ny = 0;
                 }
                 break;
 
@@ -313,15 +317,14 @@ public class Main {
                 break;
 
             case 4:
-                nx = 0;
                 if (d == 0) {
-                    newFace = 0; nx = (M-1) - y;
+                    newFace = 0; nx = 0; ny = (M-1) - x;
                 } else if (d == 1) {
-                    newFace = 1; ny = y;
+                    newFace = 1; nx = 0; ny = x;
                 } else if (d == 2) {
-                    newFace = 2; ny = y;
+                    newFace = 2; nx = 0; ny = y;
                 } else {
-                    newFace = 3; ny = (M-1) - y;
+                    newFace = 3; nx = 0 ; ny = (M-1) - y;
                 }
                 break;
 
@@ -479,6 +482,7 @@ public class Main {
             timeMorphies.add(morphy);
         }
     }
+
 
     static class TimeMorphy{
         int x,y;
