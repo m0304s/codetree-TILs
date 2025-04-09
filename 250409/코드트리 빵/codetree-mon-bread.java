@@ -27,6 +27,8 @@ public class Main {
     static ArrayList<ConvenientStore> convenientStores;
     static ArrayList<Node> personList;
     
+    static ArrayList<Node> nodesToChangeUsing;
+    
     public static void main(String[] args) throws IOException {
         init();
         solution();
@@ -36,9 +38,14 @@ public class Main {
         int time = 0;
         while (!isAllConvenientStoreUsed()) {
             time++;
+            nodesToChangeUsing = new ArrayList<>();
             moveToConvenientStore();  // 1번 행동
             //2번 로직 구현 -> moveToConvenientStore 안에 구현되어 있음
             moveToBaseCamp(time);
+            
+            for(Node node : nodesToChangeUsing) {
+            	map[node.x][node.y] = USED;
+            }
         }
         
         bw.write(time+"\n");
@@ -53,7 +60,6 @@ public class Main {
     	 */
     	
     	//갈수 있는 모든 사람이 이동하고 난 뒤에 이동할 수 없음 처리
-    	ArrayList<Node> nodesToChangeUsing = new ArrayList<>();
     	for(int i=0;i<M;i++) {
     		Node person = personList.get(i);	//i번째 사람
     		ConvenientStore store = convenientStores.get(i);	//i번째 사람이 가고 싶어하는 편의점
@@ -68,9 +74,6 @@ public class Main {
     		}
     	}
     	
-    	for(Node node : nodesToChangeUsing) {
-    		map[node.x][node.y] = USED;
-    	}
 	}
 
     private static Node findNearestBaseCamp(ConvenientStore store) {
@@ -143,7 +146,7 @@ public class Main {
             // 편의점에 도착한 경우
             if (targetStore.x == moveDir.x && targetStore.y == moveDir.y) {
                 targetStore.isUsed = true;
-                map[targetStore.x][targetStore.y] = USED; // 해당 셀은 이후에 지나갈 수 없음.
+                nodesToChangeUsing.add(new Node(targetStore.x,targetStore.y));
             }
             person.x = moveDir.x;
             person.y = moveDir.y;
