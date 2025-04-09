@@ -63,7 +63,7 @@ public class Main {
 
         Node endPoint = findEndPointAtUnknownMap();
         int minTime = simulateAndBFS(startPoint,endPoint, firstTime);
-        return minTime+1;
+        return minTime;
     }
 
     static Node findStartPointAtPhase2(int x, int y) {
@@ -104,7 +104,6 @@ public class Main {
         if(startPoint == null) return -1;
         queue.add(startPoint);
 
-        // 방문 여부 체크 (N x N)
         boolean[][] visited = new boolean[N][N];
         visited[startPoint.x][startPoint.y] = true;
 
@@ -140,7 +139,7 @@ public class Main {
 
                 // 만약 도착 지점이면 현재 시점(t)에 도달한 것
                 if (cur.x == endPoint.x && cur.y == endPoint.y) {
-                    return t - 1;
+                    return t;
                 }
 
                 // 상하좌우로 확장
