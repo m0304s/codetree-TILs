@@ -39,10 +39,14 @@ public class Main {
         while (!isAllConvenientStoreUsed()) {
             time++;
             nodesToChangeUsing = new ArrayList<>();
-            moveToConvenientStore();  // 1번 행동
-            //2번 로직 구현 -> moveToConvenientStore 안에 구현되어 있음
+            moveToConvenientStore();
+            for(Node node : nodesToChangeUsing) {
+            	map[node.x][node.y] = USED;
+            }
             moveToBaseCamp(time);
             
+            
+            //모든 사람이 이동한 뒤에 이동하지 못하는 경로라고 수정
             for(Node node : nodesToChangeUsing) {
             	map[node.x][node.y] = USED;
             }
@@ -132,11 +136,9 @@ public class Main {
 	private static void moveToConvenientStore() {
         for (int i = 0; i < M; i++) {
             Node person = personList.get(i);  // i번째 사람
-            // 사람이 아직 격자 내에 있지 않으면 이동하지 않음.
-            if (!inRange(person.x, person.y)) continue;
-            
             ConvenientStore targetStore = convenientStores.get(i); // i번째 사람이 가고 싶은 편의점
             
+            if (!inRange(person.x, person.y)) continue;
             // 이미 편의점에 도착한 경우 추가 이동 없이 넘어감.
             if (person.x == targetStore.x && person.y == targetStore.y) continue;
             
@@ -148,6 +150,7 @@ public class Main {
                 targetStore.isUsed = true;
                 nodesToChangeUsing.add(new Node(targetStore.x,targetStore.y));
             }
+            
             person.x = moveDir.x;
             person.y = moveDir.y;
         }
