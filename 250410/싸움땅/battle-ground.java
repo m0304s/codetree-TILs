@@ -157,15 +157,18 @@ public class Main {
 		
 		
 		//승자는 승리한 칸에서 가장 좋은 총으로 교체
-		ArrayList<Gun> gunList = gunMap[winner.x][winner.y];
-		gunList.add(winner.gun);
-		
-		Collections.sort(gunList);
-		Gun best = gunList.get(0);
-		
-		winner.gun = best;
-		gunList.remove(best);
-		gunMap[winner.x][winner.y] = gunList; 
+	    ArrayList<Gun> gunList = gunMap[winner.x][winner.y];
+	    if (winner.gun != null) {
+	        gunList.add(winner.gun);
+	    }
+	    if (!gunList.isEmpty()) {
+	        Collections.sort(gunList);
+	        Gun best = gunList.get(0);
+	        winner.gun = best;
+	        gunList.remove(best);
+	    } else {
+	        winner.gun = null;
+	    } 
 	}
 
 	private static void addGunToPlayer(Player player, int nx, int ny) {
