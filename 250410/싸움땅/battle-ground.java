@@ -154,6 +154,9 @@ public class Main {
 	            break;
 	        }
 	    }
+	    //패자가 이동한 곳에 총이 있으면 줍기
+	    addGunToPlayer(loser, loser.x, loser.y);
+
 		
 		
 		//승자는 승리한 칸에서 가장 좋은 총으로 교체
@@ -168,7 +171,7 @@ public class Main {
 	        gunList.remove(best);
 	    } else {
 	        winner.gun = null;
-	    } 
+	    }
 	}
 
 	private static void addGunToPlayer(Player player, int nx, int ny) {
