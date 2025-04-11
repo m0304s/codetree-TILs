@@ -56,17 +56,23 @@ public class Main {
     
     public static void main(String[] args) throws IOException {
         // 시뮬레이션 혹은 디버그를 위해 초기화 후 실행
-        init();
-        List<Point> route = findShortestPathFromMedusaToPark();
-        if(route == null){  
-            bw.write("-1\n");
-            bw.close();
-            br.close();
-        }else {        	
-        	simulation(route);
-        	bw.flush();
+        int result = init();
+        if(result == -1) {
+        	bw.write("-1\n");
         	bw.close();
         	br.close();
+        }else {        	
+        	List<Point> route = findShortestPathFromMedusaToPark();
+        	if(route == null){  
+        		bw.write("-1\n");
+        		bw.close();
+        		br.close();
+        	}else {        	
+        		simulation(route);
+        		bw.flush();
+        		bw.close();
+        		br.close();
+        	}
         }
     }
     
@@ -429,12 +435,18 @@ public class Main {
         return x >= 0 && x < N && y >= 0 && y < N;
     }
     
-    static void init() throws IOException {
-        String[] tokens = br.readLine().split(" ");
+    static int init() throws IOException {
+        String input = br.readLine();
+        if(input == null || input.trim().equals("")) return -1;
+        
+        String[] tokens = input.split(" ");
         N = Integer.parseInt(tokens[0]);
         M = Integer.parseInt(tokens[1]);
         
-        tokens = br.readLine().split(" ");
+        input = br.readLine();
+        if(input == null || input.trim().equals("")) return -1;
+        // 공백으로 구분해서 토큰 분리
+        tokens = input.split(" ");
         int x = Integer.parseInt(tokens[0]);
         int y = Integer.parseInt(tokens[1]);
         medusa = new Point(x, y);
@@ -443,7 +455,9 @@ public class Main {
         y = Integer.parseInt(tokens[3]);
         park = new Point(x, y);
         
-        tokens = br.readLine().split(" ");
+        input = br.readLine();
+        if(input == null || input.trim().equals("")) return -1;
+        tokens = input.split(" ");
         soldiers = new ArrayList<>();
         for (int i = 0; i < tokens.length; i += 2) {
             x = Integer.parseInt(tokens[i]);
@@ -454,11 +468,15 @@ public class Main {
         
         map = new int[N][N];
         for (int i = 0; i < N; i++) {
-            tokens = br.readLine().split(" ");
+            input = br.readLine();
+            if(input == null || input.trim().equals("")) return -1;
+            tokens = input.split(" ");
             for (int j = 0; j < N; j++) {
                 map[i][j] = Integer.parseInt(tokens[j]);
             }
         }
+        
+        return 0;
     }
     
     static int calcDistance(Point point1, Point point2) {
