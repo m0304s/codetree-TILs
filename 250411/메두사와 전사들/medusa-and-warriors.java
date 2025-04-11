@@ -1,6 +1,9 @@
 import java.io.*;
 import java.util.*;
 
+import javax.jws.soap.SOAPBinding;
+import javax.sound.sampled.SourceDataLine;
+
 public class Main {
     static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -62,34 +65,12 @@ public class Main {
             bw.write("-1\n");
             bw.close();
             br.close();
+        }else {        	
+        	simulation(route);
+        	bw.flush();
+        	bw.close();
+        	br.close();
         }
-        simulation(route);
-//        debug();
-        bw.flush();
-        bw.close();
-        br.close();
-    }
-    
-    private static void debug() {
-        N = 9;
-        M = 3;
-        medusa = new Point(4, 4);
-        soldiers = new ArrayList<>();
-        soldiers.add(new Soldier(2, 2, Status.ALIVE));
-        soldiers.add(new Soldier(4, 2, Status.ALIVE));
-        soldiers.add(new Soldier(6, 6, Status.ALIVE));
-        
-        // d 값에 따라 메두사의 시선 (대각선 포함) 결과를 확인
-        countStoneWarriors(2);
-        
-//        medusa = new Point(0, 4);
-//        soldiers = new ArrayList<>();
-//        soldiers.add(new Soldier(4, 2, Status.ALIVE));
-//        soldiers.add(new Soldier(4, 4, Status.ALIVE));
-//        soldiers.add(new Soldier(6, 6, Status.ALIVE));
-//        
-//        // d 값에 따라 메두사의 시선 (대각선 포함) 결과를 확인
-//        countStoneWarriors(1);
     }
     
     static void simulation(List<Point> route) throws IOException{
