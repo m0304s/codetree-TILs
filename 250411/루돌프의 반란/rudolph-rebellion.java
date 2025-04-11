@@ -64,6 +64,8 @@ public class Main {
 	static int N,M,P,C,D;
 	static Point rudolph;
 	static ArrayList<Santa> santaList;
+	
+	static int outCnt = 0;
 	public static void main(String[] args) throws IOException{
 		init();
 		Collections.sort(santaList, (o1,o2) -> (o1.num - o2.num));
@@ -74,7 +76,7 @@ public class Main {
 	}
 	
 	static void solution() throws IOException{
-		for(int turn=0;turn<M;turn++) {		
+		for(int turn=0;turn<M;turn++) {
 			moveRudolph(turn);	//루돌프의 움직임
 			moveSanta(turn);	//산타의 움직임
 			getPointToLiveSanta();	//살아남은 산타 1포인트 증가
@@ -86,6 +88,13 @@ public class Main {
 		}bw.write("\n");
 	}
 	
+//	private static boolean isAllOut() {
+//		for(int i=0;i<santaList.size();i++) {
+//			if(santaList.get(i).status == Status.ALIVE || santaList.get(i).status == Status.STUNNED) return false;
+//		}
+//		return true;
+//	}
+
 	private static void getPointToLiveSanta() {
 		for(int i=0;i<santaList.size();i++) {
 			Santa santa = santaList.get(i);
@@ -320,40 +329,58 @@ public class Main {
 	 * @return 루돌프가 1칸 돌진했을때, 가장 가까워지는 산타 반환
 	 */
 	private static NearestSantaSimulation findNearestSanta() {
-		int [] dx = {-1,-1,0,1,1,1,0,-1};
-		int [] dy = {0,1,1,1,0,-1,-1,-1};
-		
-		ArrayList<NearestSantaSimulation> candidates = new ArrayList<>();
-		for(int d=0;d<8;d++) {
-			int nx = rudolph.x + dx[d];
-			int ny = rudolph.y + dy[d];
-			
-			//(nx,ny) : 루돌프의 새 좌표, 루돌프의 새 좌표에서 가장 거리상 가까운 산타
-			if(!inRange(nx, ny)) continue;
-			for(int i=0;i<santaList.size();i++) {
-				Santa santa = santaList.get(i);
-				if(santa.status == Status.OUT) continue;
-				int distance = calcManhattenDistance(new Point(nx,ny), new Point(santa.x, santa.y));
-				NearestSantaSimulation simulation = new NearestSantaSimulation(santa, d, distance);
-				candidates.add(simulation);
-			}
-		}
-		
-		Collections.sort(candidates, new Comparator<NearestSantaSimulation>() {
-			public int compare(NearestSantaSimulation o1, NearestSantaSimulation o2) {
-				if(o1.distance == o2.distance) {
-					if(o1.santa.x == o2.santa.x) {
-						return o2.santa.y - o1.santa.y;
-					}else {
-						return o2.santa.x - o1.santa.x;
-					}
-				}else {
-					return o1.distance - o2.distance;
-				}
-			}
-		});
-		return candidates.get(0);
+	    int[] dx = {-1, -1, 0, 1, 1, 1, 0, -1};
+	    int[] dy = {0, 1, 1, 1, 0, -1, -1, -1};
+
+	    ArrayList<NearestSantaSimulation> candidates = new ArrayList<>();
+	    for (Santa santa : santaList) {
+	        if (santa.status == Status.OUT) continue; // 탈락한 산타는 제외
+	        int distance = calcManhattenDistance(rudolph, new Point(santa.x, santa.y));
+	        // 임시로 dir은 0으로 지정 (나중에 계산할 예정)
+	        candidates.add(new NearestSantaSimulation(santa, distance, 0));
+	    }
+
+	    // 후보가 하나도 없으면 null 반환
+	    if (candidates.isEmpty()) return null;
+
+	    // 거리 기준 오름차순, 거리가 같다면 행(r)이 큰 순, 그 다음 열(c)이 큰 순으로 정렬
+	    Collections.sort(candidates, new Comparator<NearestSantaSimulation>() {
+	        public int compare(NearestSantaSimulation o1, NearestSantaSimulation o2) {
+	            if (o1.distance == o2.distance) {
+	                if(o1.santa.x == o2.santa.x) {
+	                    return o2.santa.y - o1.santa.y;
+	                } else {
+	                    return o2.santa.x - o1.santa.x;
+	                }
+	            } else {
+	                return o1.distance - o2.distance;
+	            }
+	        }
+	    });
+
+	    NearestSantaSimulation best = candidates.get(0);
+	    Santa targetSanta = best.santa;
+	    
+	    int moveX = 0, moveY = 0;
+	    if (targetSanta.x > rudolph.x) moveX = 1;
+	    else if (targetSanta.x < rudolph.x) moveX = -1;
+	    else moveX = 0;
+
+	    if (targetSanta.y > rudolph.y) moveY = 1;
+	    else if (targetSanta.y < rudolph.y) moveY = -1;
+	    else moveY = 0;
+
+	    int dir = -1;
+	    for (int d = 0; d < 8; d++) {
+	        if (dx[d] == moveX && dy[d] == moveY) {
+	            dir = d;
+	            break;
+	        }
+	    }
+	    best.dir = dir;
+	    return best;
 	}
+
 	
 	
 	private static int calcManhattenDistance(Point point1, Point point2) {
@@ -426,18 +453,15 @@ public class Main {
 	
 	static class NearestSantaSimulation{
 		Santa santa;
-		int dir;
 		int distance;
-		public NearestSantaSimulation(Santa santa, int dir, int distance) {
+		int dir;
+		public NearestSantaSimulation(Santa santa, int distance, int dir) {
 			super();
 			this.santa = santa;
 			this.dir = dir;
 			this.distance = distance;
 		}
-		@Override
-		public String toString() {
-			return "NearestSantaSimulation [santa=" + santa + ", dir=" + dir + ", distance=" + distance + "]";
-		}
+		
 	}
 	
 	static enum Status{
