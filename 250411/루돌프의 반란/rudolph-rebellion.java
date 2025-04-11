@@ -77,6 +77,7 @@ public class Main {
 	
 	static void solution() throws IOException{
 		for(int turn=0;turn<M;turn++) {
+			if(isAllOut()) break;
 			moveRudolph(turn);	//루돌프의 움직임
 			moveSanta(turn);	//산타의 움직임
 			getPointToLiveSanta();	//살아남은 산타 1포인트 증가
@@ -88,12 +89,12 @@ public class Main {
 		}bw.write("\n");
 	}
 	
-//	private static boolean isAllOut() {
-//		for(int i=0;i<santaList.size();i++) {
-//			if(santaList.get(i).status == Status.ALIVE || santaList.get(i).status == Status.STUNNED) return false;
-//		}
-//		return true;
-//	}
+	private static boolean isAllOut() {
+		for(int i=0;i<santaList.size();i++) {
+			if(santaList.get(i).status == Status.ALIVE || santaList.get(i).status == Status.STUNNED) return false;
+		}
+		return true;
+	}
 
 	private static void getPointToLiveSanta() {
 		for(int i=0;i<santaList.size();i++) {
@@ -137,7 +138,7 @@ public class Main {
 				
 				if(!inRange(nx, ny)) continue;
 				int newDistance = calcManhattenDistance(new Point(nx,ny), rudolph);
-				if(originalDistance <= newDistance) continue;
+				if(originalDistance < newDistance) continue;
 				Santa anotherSanta = isSanta(nx, ny);
 				if(anotherSanta != null) continue;
 				candidates.add(new int[] {d,newDistance});
@@ -181,6 +182,7 @@ public class Main {
 		
 		NearestSantaSimulation best = findNearestSanta();
 		Santa targetSanta = best.santa;	//목표로 하는 산타
+		
 		int dir = best.dir;	//목표로 하는 산타로 이동하기 위한 방향값
 		
 		rudolph.x += dx[dir];
@@ -317,7 +319,7 @@ public class Main {
 	private static Santa isSanta(int x, int y) {
 		for(int i=0;i<santaList.size();i++) {
 			Santa santa = santaList.get(i);
-			if(santa.x == x && santa.y == y) {
+			if(santa.x == x && santa.y == y && santa.status != Status.OUT) {
 				return santa;
 			}
 		}
@@ -336,11 +338,9 @@ public class Main {
 	    for (Santa santa : santaList) {
 	        if (santa.status == Status.OUT) continue; // 탈락한 산타는 제외
 	        int distance = calcManhattenDistance(rudolph, new Point(santa.x, santa.y));
-	        // 임시로 dir은 0으로 지정 (나중에 계산할 예정)
 	        candidates.add(new NearestSantaSimulation(santa, distance, 0));
 	    }
 
-	    // 후보가 하나도 없으면 null 반환
 	    if (candidates.isEmpty()) return null;
 
 	    // 거리 기준 오름차순, 거리가 같다면 행(r)이 큰 순, 그 다음 열(c)이 큰 순으로 정렬
