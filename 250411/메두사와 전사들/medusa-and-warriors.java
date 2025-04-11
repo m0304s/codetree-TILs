@@ -1,9 +1,6 @@
 import java.io.*;
 import java.util.*;
 
-import javax.jws.soap.SOAPBinding;
-import javax.sound.sampled.SourceDataLine;
-
 public class Main {
     static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -83,8 +80,9 @@ public class Main {
             int attackSoldiers = attackMedusa();	// 전사 공격
             changeStatus();			// 돌이었던 병사 ALIVE로 변경
             if(medusa.x == park.x && medusa.y == park.y) bw.write("0\n");
-            else
+            else {
             	bw.write(totalMoveDistance + " " + stoneSoldiers + " " + attackSoldiers+"\n");
+            }
         }
     }
     
@@ -225,22 +223,25 @@ public class Main {
         for(int i=0;i<N;i++) {
         	for(int j=0;j<N;j++) {
         		if(best.sights[i][j] == STONE) {
-        			Soldier soldier = findSoldiers(i,j);
-        			soldier.status = Status.STONE;
+        			ArrayList<Soldier> list = findSoldiers(i,j);
+        			for(Soldier soldier : list) {
+        				soldier.status = Status.STONE;
+        			}
         		}
         	}
         }
         return simulationResults.get(0);  // 가장 전사를 돌로 만든 결과 반환 (예시)
     }
     
-    private static Soldier findSoldiers(int i, int j) {
+    private static ArrayList<Soldier> findSoldiers(int i, int j) {
+    	ArrayList<Soldier> candidates = new ArrayList<>();
 		for(int k=0;k<soldiers.size();k++) {
 			Soldier soldier = soldiers.get(k);
 			if(soldier.x == i && soldier.y == j) {
-				return soldier;
+				candidates.add(soldier);
 			}
 		}
-		return null;
+		return candidates;
 	}
 
 	/**
