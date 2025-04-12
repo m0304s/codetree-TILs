@@ -1,7 +1,7 @@
 import java.util.*;
 import java.io.*;
 
-public class 꼬리잡기놀이 {
+public class Main {
     static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
 
