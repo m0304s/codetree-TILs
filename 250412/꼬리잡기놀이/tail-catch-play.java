@@ -1,5 +1,16 @@
-import java.io.*;
-import java.util.*;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Queue;
 
 public class Main {
     static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -34,7 +45,7 @@ public class Main {
     static int [][] map;
     static ArrayList<Team> teamList;
 
-    public static void main(String[] args) throws IOException{
+    public static void main(String[] args) throws IOException {
         init();
         simulation();
     }
@@ -45,13 +56,14 @@ public class Main {
             moveMembersPerTeam();
             int score = throwBall(turn);
             totalScore += score;
+//            printMap();
         }
         System.out.println(totalScore);
     }
 
     /**
      * N: 격자의 한 변 크기
-     * turn: 1 이상인 자연수(몇 번째 턴인지)
+     * turn: 1 이상인 자연수(몇 번째 턴인지)r
      */
     private static int throwBall(int turn) {
         int changedTurn = (turn - 1) % (4 * N) + 1;
@@ -96,14 +108,39 @@ public class Main {
         while(true){
             if(!inRange(startX,startY)) break;  //벽밖을 만나면 종료
 
+            Team catchedTeam = null;
             if(isMemberIsAtPoint(startX,startY) != null){   //사람을 만났을 경우
                 //몇번째 팀에 존재하는지 체크 후 점수 및 방향 전환
                 Member catchedMember = isMemberIsAtPoint(startX,startY);
                 for(Team team : teamList){
-                    if(team.memberSet.contains(catchedMember)){
-                        if(team.dir) team.dir = false;
-                        else team.dir = true;
+                    if(isContain(team,catchedMember)){
+                        catchedTeam = team;
+                        break;
                     }
+                }
+
+                if(catchedTeam != null){
+                    //그 팀을 반대로 전환, (머리 -> 꼬리, 꼬리 -> 머리, 각 팀원 num : team.members.size() - member.num
+                    ArrayList<Member> newMembers = new ArrayList<>();
+                    for(Member member : catchedTeam.members) {
+                        int changedNum = catchedTeam.members.size() - member.num + 1;
+                        if(member.role == HEAD) {
+                            newMembers.add(new Member(changedNum,member.x,member.y, TAIL));
+                            map[member.x][member.y] = TAIL;
+                        }else if(member.role == TAIL){
+                            newMembers.add(new Member(changedNum,member.x,member.y, HEAD));
+                            map[member.x][member.y] = HEAD;
+                        }else {
+                            newMembers.add(new Member(changedNum,member.x,member.y, REMAIN));
+                        }
+                    }
+                    Collections.sort(newMembers, new Comparator<Member>() {
+                        @Override
+                        public int compare(Member o1, Member o2) {
+                            return o1.role - o2.role;
+                        }
+                    });
+                    catchedTeam.members = newMembers;
                 }
 
                 return getScore(catchedMember);
@@ -115,6 +152,14 @@ public class Main {
         return 0;
     }
 
+    private static boolean isContain(Team team, Member catchedMember) {
+        for(Member member : team.members){
+            if(member.x == catchedMember.x && member.y == catchedMember.y && member.role == catchedMember.role && member.num == catchedMember.num) return true;
+        }
+
+        return false;
+    }
+
     /**
      * 각 팀별로 팀원들의 위치를 이동시킴
      */
@@ -122,6 +167,8 @@ public class Main {
         for(Team team : teamList){
             moveMembers(team);
         }
+//        System.out.println("공굴리기 이전 맵 상태");
+//        printMap();
     }
 
     static void printMap(){
@@ -131,74 +178,45 @@ public class Main {
             }
             System.out.println();
         }
+        System.out.println("=======================");
     }
+
 
     static void moveMembers(Team team){
         int [] dx = {0,0,-1,1};
         int [] dy = {-1,1,0,0};
 
-        if(team.dir){   //정방향일 경우
-            ArrayList<Point> beforeMembersPoints = new ArrayList<>();
-            for(int i=0;i<team.members.size();i++){
-                if(i == 0) beforeMembersPoints.add(null);
-                else beforeMembersPoints.add(new Point(team.members.get(i-1).x, team.members.get(i-1).y));
-            }
-            //팀의 머리사람부터 이동
-            for(int i=0;i<team.members.size();i++){
-                Member member = team.members.get(i);
-                map[member.x][member.y] = MOVABLE;
-                if(member.role == HEAD){
-                    for(int d=0;d<4;d++){
-                        int nx = member.x + dx[d];
-                        int ny = member.y + dy[d];
+        HashMap<Integer, Member> memberHashMap = new HashMap<>();
 
-                        if(!inRange(nx,ny) || isMemberIsAtPoint(nx,ny) != null || map[nx][ny] != MOVABLE) continue;
+        for(int i=0;i<team.members.size();i++){
+            Member member = team.members.get(i);
+            memberHashMap.put(member.num-1, new Member(member.num, member.x, member.y, member.role));
+        }
 
-                        member.x = nx;
-                        member.y = ny;
-                        map[nx][ny] = member.role;
-                    }
-                }else{
-                    //이전 멤버의 위치로 이동
-                    int nx = beforeMembersPoints.get(i).x;
-                    int ny = beforeMembersPoints.get(i).y;
+        //팀의 머리사람부터 이동
+        for(int i=0;i<team.members.size();i++){
+            Member member = team.members.get(i);
+            map[member.x][member.y] = MOVABLE;
+            if(member.role == HEAD){
+                for(int d=0;d<4;d++){
+                    int nx = member.x + dx[d];
+                    int ny = member.y + dy[d];
+
+                    if(!inRange(nx,ny) || isMemberIsAtPoint(nx,ny) != null || map[nx][ny] != MOVABLE) continue;
 
                     member.x = nx;
                     member.y = ny;
                     map[nx][ny] = member.role;
+                    break;
                 }
-            }
-        }else{          //역방향일 경우
-            //팀의 꼬리사람부터 이동
-            ArrayList<Point> beforeMembersPoints = new ArrayList<>();
-            for(int i=team.members.size()-1;i>=0;i--){
-                if(i == team.members.size()-1) beforeMembersPoints.add(null);
-                else beforeMembersPoints.add(new Point(team.members.get(i+1).x, team.members.get(i+1).y));
-            }
+            }else{
+                //이전 멤버의 위치로 이동
+                int nx = memberHashMap.get(i-1).x;
+                int ny = memberHashMap.get(i-1).y;
 
-            for(int i=team.members.size()-1;i>=0;i--){
-                Member member = team.members.get(i);
-                map[member.x][member.y] = MOVABLE;
-                if(i == team.members.size()-1){
-                    //사람이 없고, MOVABLE인 경우 이동 가능
-                    for(int d=0;d<4;d++){
-                        int nx = member.x + dx[d];
-                        int ny = member.y + dy[d];
-
-                        if(!inRange(nx,ny) || isMemberIsAtPoint(nx,ny) != null || map[nx][ny] != MOVABLE) continue;
-
-                        member.x = nx;
-                        member.y = ny;
-                        map[nx][ny] = member.role;
-                    }
-                }else{
-                    int nx = beforeMembersPoints.get(team.members.size()-1 -i).x;
-                    int ny = beforeMembersPoints.get(team.members.size()-1 -i).y;
-
-                    member.x = nx;
-                    member.y = ny;
-                    map[nx][ny] = member.role;
-                }
+                member.x = nx;
+                member.y = ny;
+                map[nx][ny] = member.role;
             }
         }
     }
@@ -286,7 +304,7 @@ public class Main {
             }
         }
 
-        return new Team(members,true);
+        return new Team(members);
     }
 
     static boolean inRange(int x,int y){
@@ -296,19 +314,16 @@ public class Main {
     static class Team{
         ArrayList<Member> members;
         HashSet<Member> memberSet;
-        boolean dir;    //정방향, 역방향
 
-        public Team(ArrayList<Member> members, boolean dir) {
+        public Team(ArrayList<Member> members) {
             this.members = members;
             this.memberSet = new HashSet<>(members);
-            this.dir = dir;
         }
 
         @Override
         public String toString() {
             return "Team{" +
                     "members=" + members +
-                    ", dir=" + dir +
                     '}';
         }
     }
@@ -334,6 +349,7 @@ public class Main {
         int x,y;
         int role;
         int num;
+
 
         public Member(int num,int x, int y, int role) {
             this.x = x;
