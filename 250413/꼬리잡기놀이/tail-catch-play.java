@@ -1,17 +1,7 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Queue;
+import java.util.*;
+import java.io.*;
 
-public class Main {
+public class 꼬리잡기놀이 {
     static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
 
@@ -46,21 +36,20 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         init();
-//        System.out.println(teamList);
         simulation();
     }
 
-    static void simulation(){
+    static void simulation() throws IOException{
         int totalScore = 0;
         for(int turn=1;turn<=K;turn++){
-//            System.out.println("Turn : " + turn);
             moveMembersPerTeam(turn);
             int score = throwBall(turn);
-//            System.out.println(teamList);
             totalScore += score;
-//            printMap();
         }
-        System.out.println(totalScore);
+        bw.write(totalScore+"\n");
+        bw.flush();
+        bw.close();
+        br.close();
     }
 
     /**
@@ -107,10 +96,6 @@ public class Main {
                 break;
         }
         //시작좌표 : (startX,startY) 변화량 : (dx,dy);
-//        System.out.println("Start X : " + startX + " StartY : " + startY);
-//        if(startX == 3 && startY == 0){
-//            System.out.println("디버깅");
-//        }
         while(true){
             if(!inRange(startX,startY)) break;  //벽밖을 만나면 종료
 
@@ -126,7 +111,6 @@ public class Main {
                 }
 
                 if(catchedTeam != null){
-//                    System.out.println("공을 잡은 사람 : " + catchedMember);
                     //그 팀을 반대로 전환, (머리 -> 꼬리, 꼬리 -> 머리, 각 팀원 num : team.members.size() - member.num
                     // 1->3, 2->2, 3->1
                     ArrayList<Member> newMembers = new ArrayList<>();
@@ -151,7 +135,6 @@ public class Main {
                     catchedTeam.members = newMembers;
                 }
 
-//                System.out.println("획득한 점수 : " + getScore(catchedMember));
                 return getScore(catchedMember);
             }
 
@@ -176,8 +159,6 @@ public class Main {
         for(Team team : teamList){
             moveMembers(team, turn);
         }
-//        System.out.println("공굴리기 이전 맵 상태");
-//        printMap();
     }
 
     static void printMap(){
