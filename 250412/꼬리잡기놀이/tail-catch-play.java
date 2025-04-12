@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -47,6 +46,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         init();
+        System.out.println(teamList);
         simulation();
     }
 
@@ -56,7 +56,7 @@ public class Main {
             moveMembersPerTeam();
             int score = throwBall(turn);
             totalScore += score;
-//            printMap();
+            printMap();
         }
         System.out.println(totalScore);
     }
@@ -105,6 +105,8 @@ public class Main {
                 break;
         }
         //시작좌표 : (startX,startY) 변화량 : (dx,dy);
+        System.out.println("Start X : " + startX + " StartY : " + startY);
+
         while(true){
             if(!inRange(startX,startY)) break;  //벽밖을 만나면 종료
 
@@ -167,8 +169,8 @@ public class Main {
         for(Team team : teamList){
             moveMembers(team);
         }
-//        System.out.println("공굴리기 이전 맵 상태");
-//        printMap();
+        System.out.println("공굴리기 이전 맵 상태");
+        printMap();
     }
 
     static void printMap(){
@@ -182,43 +184,52 @@ public class Main {
     }
 
 
-    static void moveMembers(Team team){
-        int [] dx = {0,0,-1,1};
-        int [] dy = {-1,1,0,0};
+    static void moveMembers(Team team) {
+        int[] dx = {0, 0, -1, 1};
+        int[] dy = {-1, 1, 0, 0};
 
-        HashMap<Integer, Member> memberHashMap = new HashMap<>();
-
-        for(int i=0;i<team.members.size();i++){
-            Member member = team.members.get(i);
-            memberHashMap.put(member.num-1, new Member(member.num, member.x, member.y, member.role));
-        }
-
-        //팀의 머리사람부터 이동
-        for(int i=0;i<team.members.size();i++){
-            Member member = team.members.get(i);
+        ArrayList<Point> beforePositions = new ArrayList<>();
+        for (Member member : team.members) {
+            beforePositions.add(new Point(member.x, member.y));
             map[member.x][member.y] = MOVABLE;
-            if(member.role == HEAD){
-                for(int d=0;d<4;d++){
-                    int nx = member.x + dx[d];
-                    int ny = member.y + dy[d];
-
-                    if(!inRange(nx,ny) || isMemberIsAtPoint(nx,ny) != null || map[nx][ny] != MOVABLE) continue;
-
-                    member.x = nx;
-                    member.y = ny;
-                    map[nx][ny] = member.role;
-                    break;
-                }
-            }else{
-                //이전 멤버의 위치로 이동
-                int nx = memberHashMap.get(i-1).x;
-                int ny = memberHashMap.get(i-1).y;
-
-                member.x = nx;
-                member.y = ny;
-                map[nx][ny] = member.role;
-            }
         }
+
+        Member head = team.members.get(0);
+        boolean headMoved = false;
+        for (int d = 0; d < 4; d++) {
+            int nx = head.x + dx[d];
+            int ny = head.y + dy[d];
+            if (!inRange(nx, ny)) continue;
+            if (map[nx][ny] != MOVABLE || isMemberIsAtPoint(nx, ny) != null) continue;
+
+            head.x = nx;
+            head.y = ny;
+            map[nx][ny] = head.role;
+            headMoved = true;
+            break;
+        }
+
+        if (!headMoved) {
+            Member tail = findTail(team);
+            head.x = tail.x;
+            head.y = tail.y;
+            map[tail.x][tail.y] = head.role;
+        }
+
+        for (int i = 1; i < team.members.size(); i++) {
+            Member member = team.members.get(i);
+            Point prevPos = beforePositions.get(i - 1);
+            member.x = prevPos.x;
+            member.y = prevPos.y;
+            map[prevPos.x][prevPos.y] = member.role;
+        }
+    }
+
+    private static Member findTail(Team team) {
+        for(Member member : team.members){
+            if(member.role == TAIL) return member;
+        }
+        return null;
     }
 
     /**
@@ -276,31 +287,47 @@ public class Main {
     }
 
     private static Team bfsToFindTeam(int x, int y) {
-        int [] dx = {0,0,-1,1};
-        int [] dy = {-1,1,0,0};
+        int[] dx = {0, 0, -1, 1};
+        int[] dy = {-1, 1, 0, 0};
 
         ArrayList<Member> members = new ArrayList<>();
         Queue<Point> queue = new ArrayDeque<>();
-        boolean [][] visited = new boolean[N][N];
-        queue.add(new Point(x,y));
+        boolean[][] visited = new boolean[N][N];
+        queue.add(new Point(x, y));
         visited[x][y] = true;
 
         int num = 1;
-        while(!queue.isEmpty()){
+        while (!queue.isEmpty()) {
             Point curNode = queue.poll();
             int nodeValue = map[curNode.x][curNode.y];
-            if(nodeValue == HEAD || nodeValue == REMAIN || nodeValue == TAIL){
-                members.add(new Member(num++,curNode.x, curNode.y, nodeValue));
+            // 팀 구성원(HEAD, REMAIN, TAIL)만 members에 추가
+            if (nodeValue == HEAD || nodeValue == REMAIN || nodeValue == TAIL) {
+                members.add(new Member(num++, curNode.x, curNode.y, nodeValue));
             }
 
-            for(int d=0;d<4;d++){
+            for (int d = 0; d < 4; d++) {
                 int nx = curNode.x + dx[d];
                 int ny = curNode.y + dy[d];
 
-                if(!inRange(nx,ny) || visited[nx][ny] || map[nx][ny] == BLANK) continue;
+                if (!inRange(nx, ny) || visited[nx][ny]) continue;
+                int newNodeValue = map[nx][ny];
 
-                queue.add(new Point(nx,ny));
-                visited[nx][ny] = true;
+                if (nodeValue == HEAD) { // 1일 때: 반드시 2로 이어짐
+                    if (newNodeValue == REMAIN) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                } else if (nodeValue == REMAIN) { // 2일 때: 2 또는 3으로 이어짐
+                    if (newNodeValue == REMAIN || newNodeValue == TAIL) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                } else if (nodeValue == TAIL) { // 3일 때: 4 또는 1로 이어짐
+                    if (newNodeValue == MOVABLE || newNodeValue == HEAD) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                }
             }
         }
 
