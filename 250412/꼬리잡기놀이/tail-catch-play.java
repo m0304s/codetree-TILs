@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -46,7 +47,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         init();
-        System.out.println(teamList);
+//        System.out.println(teamList);
         simulation();
     }
 
@@ -56,7 +57,7 @@ public class Main {
             moveMembersPerTeam();
             int score = throwBall(turn);
             totalScore += score;
-            printMap();
+//            printMap();
         }
         System.out.println(totalScore);
     }
@@ -105,7 +106,7 @@ public class Main {
                 break;
         }
         //시작좌표 : (startX,startY) 변화량 : (dx,dy);
-        System.out.println("Start X : " + startX + " StartY : " + startY);
+//        System.out.println("Start X : " + startX + " StartY : " + startY);
 
         while(true){
             if(!inRange(startX,startY)) break;  //벽밖을 만나면 종료
@@ -169,8 +170,8 @@ public class Main {
         for(Team team : teamList){
             moveMembers(team);
         }
-        System.out.println("공굴리기 이전 맵 상태");
-        printMap();
+//        System.out.println("공굴리기 이전 맵 상태");
+//        printMap();
     }
 
     static void printMap(){
