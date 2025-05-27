@@ -217,24 +217,20 @@ public class Main {
 		Vacteria vacteria = new Vacteria(points, inputTime);
 		vacterias.add(vacteria);
 		
-		ArrayList<Vacteria> removedVacteria = new ArrayList<>();
-		//미생물 무리가 2개로 나뉘어져 있는게 아닌지 체크
-		for(int index=0;index<vacterias.size();index++) {
-			Vacteria targetVacteria = vacterias.get(index);
-			int targetTime = targetVacteria.inputTime;
-			boolean isOnePiece = isOnePiece(targetTime, targetVacteria);
-			
-			//2개로 나뉘어진 경우 폐기 처리
-			if(!isOnePiece) {
-				for(int i=0;i<targetVacteria.points.size();i++) {
-					Node point = targetVacteria.points.get(i);
-					if(map[point.x][point.y] == targetVacteria.inputTime) {
-						map[point.x][point.y] = 0;
-					}
-				}
-				
-				removedVacteria.add(targetVacteria);
-			}
+		List<Vacteria> removedVacteria = new ArrayList<>();
+		for (Vacteria v : vacterias) {
+		    if (v.points.isEmpty()) {
+		        removedVacteria.add(v);
+		    }
+		}
+		for (Vacteria v : vacterias) {
+		    if (removedVacteria.contains(v)) continue;
+		    if (!isOnePiece(v.inputTime, v)) {
+		        for (Node p : v.points) {
+		            map[p.x][p.y] = 0;
+		        }
+		        removedVacteria.add(v);
+		    }
 		}
 		
 		vacterias.removeAll(removedVacteria);
@@ -311,7 +307,7 @@ public class Main {
 		
 		return new Node(minX,minY);
 	}
-	
+
 	/**
 	 * 미생물 무리
 	 * points : 미생물 좌표
@@ -325,6 +321,13 @@ public class Main {
 			this.points = points;
 			this.inputTime = inputTime;
 		}
+
+		@Override
+		public String toString() {
+			return "Vacteria [points=" + points + ", inputTime=" + inputTime + "]";
+		}
+		
+		
 	}
 	
 	static class Node{
@@ -333,6 +336,11 @@ public class Main {
 		public Node(int x,int y) {
 			this.x = x;
 			this.y = y;
+		}
+
+		@Override
+		public String toString() {
+			return "Node [x=" + x + ", y=" + y + "]";
 		}
 	}
 
@@ -346,5 +354,11 @@ public class Main {
 			this.minX = minX;
 			this.minY = minY;
 		}
+		@Override
+		public String toString() {
+			return "Simulation [newPoints=" + newPoints + ", minX=" + minX + ", minY=" + minY + "]";
+		}
+		
+		
 	}
 }
