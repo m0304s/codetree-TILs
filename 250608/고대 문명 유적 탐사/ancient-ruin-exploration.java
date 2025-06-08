@@ -18,12 +18,14 @@ public class Main {
         init();
         for (int turn = 1; turn <= K; turn++) {
             Simulation best = discovery();
-            // 최적 회전 맵으로 교체
+            if (best.cost == 0) {
+                break;
+            }
+            
             map = best.map;
-            // 연쇄 제거 및 채우기
-            int answer = count();
-            if(answer == 0) break;
-            bw.write(answer + " ");
+            int scoreForTurn = count();
+            
+            bw.write(scoreForTurn + " ");
         }
         bw.flush();
         bw.close();
@@ -32,33 +34,36 @@ public class Main {
 
     /** 연쇄 제거 & 채우기 */
     private static int count() {
-        int totalCount = 0;
+        int totalScore = 0;
+        
         while (true) {
-            List<Node> relics = checkRelicsRemain();
-            if (relics.isEmpty()) return totalCount;
-            // 삭제 표시
-            for (Node node : relics) {
-                map[node.x][node.y] = -1;
-                totalCount++;
+            List<Node> relicsToRemove = checkRelicsRemain();
+
+            if (relicsToRemove.isEmpty()) {
+                break;
             }
-            // 벽면 큐에서 채우기
-            //우선순위에따라 정렬
-            Collections.sort(relics, new Comparator<Node>() {
-            	public int compare(Node o1, Node o2) {
-            		if(o1.y == o2.y) {
-            			return o2.x - o1.x;
-            		}else {
-            			return o1.y - o2.y;
-            		}
-            	}
+
+            // 3. 찾은 유물을 제거하고 점수를 획득
+            totalScore += relicsToRemove.size();
+            for (Node node : relicsToRemove) {
+                map[node.x][node.y] = 0; // 빈 공간으로 표시 (0 또는 -1 사용)
+            }
+
+            // 채우는 순서: 열 번호 오름차순, 행 번호 내림차순
+            Collections.sort(relicsToRemove, (o1, o2) -> {
+                if (o1.y == o2.y) {
+                    return o2.x - o1.x; // 열이 같으면 행이 큰 순서 (아래쪽 먼저)
+                }
+                return o1.y - o2.y;     // 열이 작은 순서 (왼쪽 먼저)
             });
-            
-            for (Node node : relics) {
+
+            for (Node node : relicsToRemove) {
                 if (!additional.isEmpty()) {
                     map[node.x][node.y] = additional.poll();
                 }
             }
         }
+        return totalScore;
     }
 
     private static List<Node> checkRelicsRemain() {
@@ -67,7 +72,7 @@ public class Main {
 
         for (int i = 0; i < MAP_SIZE; i++) {
             for (int j = 0; j < MAP_SIZE; j++) {
-                if (!visited[i][j]) {
+                if (!visited[i][j] && map[i][j] > 0) { // 0이 아닌 유물만 탐색
                     bfs(i, j, visited, relics, map);
                 }
             }
@@ -75,78 +80,83 @@ public class Main {
         return relics;
     }
 
-    /** 모든 회전 시뮬레이션 후 우선순위에 따라 첫 번째를 반환 */
+    /** 모든 회전 시뮬레이션 후 우선순위에 따라 최적의 결과를 반환 */
     private static Simulation discovery() {
         List<Simulation> simulationResults = new ArrayList<>();
 
-        for (int i = 1; i < MAP_SIZE - 1; i++) {
-            for (int j = 1; j < MAP_SIZE - 1; j++) {
+        for (int j = 1; j < MAP_SIZE - 1; j++) { // 중심 열
+            for (int i = 1; i < MAP_SIZE - 1; i++) { // 중심 행
                 for (int degree = 1; degree <= 3; degree++) {
+                    // 회전 시뮬레이션
                     int[][] tempMap = copyMap(map);
-                    int[][] targetMap = getTargetMap(i, j, map);
-                    int[][] rotated = rotateSubgrid(targetMap, degree);
-                    tempMap = copySmallMap(i, j, tempMap, rotated);
-
-                    // → 수정된 부분: r=i, c=j 그대로 넘깁니다.
-                    Simulation sim = simulation(tempMap, i, j, degree);
+                    int[][] subgrid = getTargetMap(i, j, tempMap);
+                    int[][] rotated = rotateSubgrid(subgrid, degree);
+                    copySmallMap(i, j, tempMap, rotated);
+                    
+                    // 회전 후 1차 획득량 계산
+                    Simulation sim = simulateAcquisition(tempMap, i, j, degree);
                     simulationResults.add(sim);
                 }
             }
         }
 
-        // cost 내림차순, degree(=rotationCount) 오름차순, r 오름, c 오름
+        // 우선순위에 따라 정렬
         simulationResults.sort((s1, s2) -> {
-            if (s1.cost != s2.cost) return s2.cost - s1.cost;
-            if (s1.rotationCount != s2.rotationCount) return s1.rotationCount - s2.rotationCount;
-            if (s1.r != s2.r) return s1.r - s2.r;
-            return s1.c - s2.c;
+            if (s1.cost != s2.cost) return s2.cost - s1.cost;           // 1. 획득 가치 내림차순
+            if (s1.rotationCount != s2.rotationCount) return s1.rotationCount - s2.rotationCount; // 2. 회전 각도 오름차순
+            if (s1.c != s2.c) return s1.c - s2.c;                         // 3. 중심 열 오름차순
+            return s1.r - s2.r;                                           // 4. 중심 행 오름차순
         });
 
         return simulationResults.get(0);
     }
 
-    /** 첫 회전 후 1차 획득 개수만 계산 (removeNodes.size()) */
-    private static Simulation simulation(int[][] tempMap, int i, int j, int rotateCount) {
+    private static Simulation simulateAcquisition(int[][] tempMap, int r, int c, int rotateCount) {
         List<Node> removeNodes = new ArrayList<>();
         boolean[][] visited = new boolean[MAP_SIZE][MAP_SIZE];
 
-        for (int x = 0; x < MAP_SIZE; x++) {
-            for (int y = 0; y < MAP_SIZE; y++) {
-                if (!visited[x][y]) {
-                    bfs(x, y, visited, removeNodes, tempMap);
+        for (int i = 0; i < MAP_SIZE; i++) {
+            for (int j = 0; j < MAP_SIZE; j++) {
+                if (!visited[i][j] && tempMap[i][j] > 0) {
+                    bfs(i, j, visited, removeNodes, tempMap);
                 }
             }
         }
 
-        // → 수정된 부분: r=i, c=j, rotationCount=degree
-        return new Simulation(removeNodes.size(), removeNodes, rotateCount, i, j, tempMap);
+        return new Simulation(removeNodes.size(), rotateCount, r, c, tempMap);
     }
 
-    private static void bfs(int i, int j, boolean[][] visited, List<Node> removeNodes, int[][] map) {
-        List<Node> tempList = new ArrayList<>();
+    private static void bfs(int startX, int startY, boolean[][] visited, List<Node> removeNodes, int[][] currentMap) {
+        List<Node> component = new ArrayList<>();
         Queue<Node> queue = new ArrayDeque<>();
-        int target = map[i][j];
+        int targetValue = currentMap[startX][startY];
 
-        visited[i][j] = true;
-        queue.add(new Node(i, j));
+        visited[startX][startY] = true;
+        queue.add(new Node(startX, startY));
+        component.add(new Node(startX, startY));
 
         while (!queue.isEmpty()) {
             Node cur = queue.poll();
-            if (map[cur.x][cur.y] == target) {
-                tempList.add(cur);
-            }
+            
             for (int d = 0; d < 4; d++) {
-                int nx = cur.x + dx[d], ny = cur.y + dy[d];
-                if (!inRange(nx, ny) || visited[nx][ny] || map[nx][ny] != target) continue;
+                int nx = cur.x + dx[d];
+                int ny = cur.y + dy[d];
+
+                if (!inRange(nx, ny) || visited[nx][ny] || currentMap[nx][ny] != targetValue) {
+                    continue;
+                }
+                
                 visited[nx][ny] = true;
                 queue.add(new Node(nx, ny));
+                component.add(new Node(nx, ny));
             }
         }
-        if (tempList.size() >= 3) {
-            removeNodes.addAll(tempList);
+
+        if (component.size() >= 3) {
+            removeNodes.addAll(component);
         }
     }
-
+    
     private static boolean inRange(int x, int y) {
         return x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE;
     }
@@ -175,13 +185,12 @@ public class Main {
         return target;
     }
 
-    private static int[][] copySmallMap(int i, int j, int[][] tempMap, int[][] sourceMap) {
+    private static void copySmallMap(int i, int j, int[][] tempMap, int[][] sourceMap) {
         for (int r = 0; r < MINI_MAP_SIZE; r++) {
             for (int c = 0; c < MINI_MAP_SIZE; c++) {
                 tempMap[i - 1 + r][j - 1 + c] = sourceMap[r][c];
             }
         }
-        return tempMap;
     }
 
     private static int[][] copyMap(int[][] original) {
@@ -211,15 +220,13 @@ public class Main {
     }
 
     private static class Simulation {
-        int cost;            // 1차 획득 개수
-        List<Node> costList;
-        int rotationCount;   // degree
-        int r, c;            // 회전 중심
-        int[][] map;         // 회전 후 맵
+        int cost;
+        int rotationCount;
+        int r, c;
+        int[][] map;
 
-        public Simulation(int cost, List<Node> costList, int rotationCount, int r, int c, int[][] map) {
+        public Simulation(int cost, int rotationCount, int r, int c, int[][] map) {
             this.cost = cost;
-            this.costList = costList;
             this.rotationCount = rotationCount;
             this.r = r;
             this.c = c;
