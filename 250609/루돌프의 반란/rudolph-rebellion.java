@@ -203,6 +203,7 @@ public class Main {
 
 	private static Santa isSanta(int x, int y) {
 		for(Santa santa : santaList) {
+			if(santa.status == Status.OUT) continue;
 			if(santa.x == x && santa.y == y) return santa;
 		}
 		return null;
