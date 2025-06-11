@@ -2,226 +2,64 @@ import java.io.*;
 import java.util.*;
 
 public class Main {
-	static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-	static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
-	static final int BLANK = 0, HEAD = 1, PERSON = 2, TAIL = 3, ROAD = 4;
+    static final int BLANK  = 0;
+    static final int HEAD   = 1;
+    static final int PERSON = 2;
+    static final int TAIL   = 3;
+    static final int ROAD   = 4;
 
-	static int N, M, K;
-	static int[][] map;
-	static int totalScore;
-	static List<Team> teamList;
-	static int[] dx = { 0, 0, -1, 1 };
-	static int[] dy = { -1, 1, 0, 0 };
+    static int N, M, K;
+    static int[][] map;
+    static long totalScore;
+    static List<Team> teamList;
+    static int[] dx = { 0,  0, -1, 1 };
+    static int[] dy = {-1,  1,  0, 0 };
 
-	public static void main(String[] args) throws IOException {
-		init();
-		simulation();
-		
-		bw.write(totalScore+"\n");
-		bw.flush();
-		bw.close();
-		br.close();
-	}
+    static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
 
-	private static void simulation() {
-		for(int k=1;k<=K;k++) {
-			moveTeam();
-			totalScore += throwBall(k);
-		}
-	}
+    public static void main(String[] args) throws IOException {
+        init();
+        simulate();
+        bw.write(totalScore + "\n");
+        bw.flush();
+        bw.close();
+        br.close();
+    }
 
-	private static int throwBall(int turn) {
-        int changedTurn = (turn - 1) % (4 * N) + 1;
+    /** 입력 읽고, 팀 정보 구성 */
+    static void init() throws IOException {
+        String[] tok = br.readLine().split(" ");
+        N = Integer.parseInt(tok[0]);
+        M = Integer.parseInt(tok[1]);
+        K = Integer.parseInt(tok[2]);
 
-        int dir  = (changedTurn - 1) / N;   // 0: 첫 구간, 1: 두 번째 구간, 2: 세 번째, 3: 네 번째
-        int step = (changedTurn - 1) % N;   // 해당 구간 안에서의 '몇 번째 턴인지' 0~(N-1)
-
-        // (3) 시작 좌표와 이동 방향 설정
-        int startX = 0, startY = 0;
-        int dx = 0, dy = 0;
-
-        switch (dir) {
-            case 0:
-                startX = step;
-                startY = 0;
-                dx = 0;
-                dy = 1;
-                break;
-
-            case 1:
-                startX = N - 1;
-                startY = step;
-                dx = -1;
-                dy = 0;
-                break;
-
-            case 2:
-                startX = (N - 1) - step;
-                startY = N - 1;
-                dx = 0;
-                dy = -1;
-                break;
-
-            case 3:
-                startX = 0;
-                startY = (N - 1) - step;
-                dx = 1;
-                dy = 0;
-                break;
+        map = new int[N][N];
+        for (int i = 0; i < N; i++) {
+            tok = br.readLine().split(" ");
+            for (int j = 0; j < N; j++) {
+                map[i][j] = Integer.parseInt(tok[j]);
+            }
         }
-        //시작좌표 : (startX,startY) 변화량 : (dx,dy);
-        int x = startX;
-        int y = startY;
-        int score = 0;
-        while(true) {
-        	if(!inRange(x,y)) break;	//격자밖을 벗어나면..
-        	if(map[x][y] == HEAD || map[x][y] == PERSON || map[x][y] == TAIL) {	//사람과 부딪히면...
-        		score = checkScore(x,y);
-        		break;
-        	}
-        	
-        	x += dx;
-        	y += dy;
+
+        // HEAD 위치마다 순서대로 팀 구성
+        teamList = new ArrayList<>();
+        boolean[][] visited = new boolean[N][N];
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                if (map[i][j] == HEAD && !visited[i][j]) {
+                    List<People> members = findMembers(i, j, visited);
+                    teamList.add(new Team(members));
+                }
+            }
         }
-        return score;
-	}
 
-	//(x,y) 좌표에 있는 사람이 팀에서 몇 번째 사람인지 체크 
-	private static int checkScore(int x, int y) {
-		Team team = findTeam(x,y);
-		int returnValue = 0;
-		for(int i=0;i<team.peoples.size();i++) {
-			People people = team.peoples.get(i);
-			if(people.point.x == x && people.point.y == y) {
-				returnValue =  (i+1) * (i+1);
-				break;
-			}
-		}
-		
-		reverseTeam(team);
-		return returnValue;
-	}
+        // 검증 (선택)
+        // if (teamList.size() != M) throw new IllegalStateException("팀 개수 불일치");
+    }
 
-	private static void reverseTeam(Team team) {
-		Collections.reverse(team.peoples);
-		for(int i=0;i<team.peoples.size();i++) {
-			Node point = team.peoples.get(i).point;
-			if(i == 0) {
-				map[point.x][point.y] = TAIL; 
-			}else if(i == team.peoples.size() -1) {
-				map[point.x][point.y] = HEAD; 
-			}else {
-				map[point.x][point.y] = PERSON; 
-			}
-		}
-	}
-
-	private static Team findTeam(int x, int y) {
-		for(Team team : teamList) {
-			for(People p : team.peoples) {
-				if(p.point.x == x && p.point.y == y) {
-					return team;
-				}
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * 각 팀은 머리사람을 따라서 한 칸 이동
-	 */
-	private static void moveTeam() {
-		for (Team team : teamList) {
-			// 1) 이동할 머리 좌표 찾기
-			People head = team.peoples.get(0);
-			Node newHead = findMovablePoint(head);
-			if (newHead == null)
-				continue;
-
-			// 2) 이전 모든 좌표는 ROAD로 표시
-			for (People p : team.peoples) {
-				map[p.point.x][p.point.y] = ROAD;
-			}
-
-			// 3) 이전 좌표들 복사
-			Node[] prevPos = new Node[team.peoples.size()];
-			for (int i = 0; i < team.peoples.size(); i++) {
-				People p = team.peoples.get(i);
-				prevPos[i] = new Node(p.point.x, p.point.y);
-			}
-
-			// 4) 꼬리부터 몸통까지 한 칸씩 뒤따라 이동
-			for (int i = team.peoples.size() - 1; i >= 1; i--) {
-				team.peoples.get(i).point = prevPos[i - 1];
-			}
-			// 5) 머리 이동
-			head.point = newHead;
-
-			// 6) HEAD / PERSON / TAIL로 다시 맵 마킹
-			for (int i = 0; i < team.peoples.size(); i++) {
-				People p = team.peoples.get(i);
-				if (i == 0) {
-					map[p.point.x][p.point.y] = HEAD;
-				} else if (i == team.peoples.size() - 1) {
-					map[p.point.x][p.point.y] = TAIL;
-				} else {
-					map[p.point.x][p.point.y] = PERSON;
-				}
-			}
-		}
-	}
-
-	// 머리사람이 이동할 수 있는 좌표 찾기
-	// 머리사람이 이동할 수 있는 좌표 -> 상하좌우 중 도로이면서, 이미 점거중인 사람이 없는 좌표
-	private static Node findMovablePoint(People head) {
-		for (int d = 0; d < 4; d++) {
-			int nx = head.point.x + dx[d];
-			int ny = head.point.y + dy[d];
-
-			if (!inRange(nx, ny))
-				continue;
-
-			if (map[nx][ny] == ROAD || map[nx][ny] == TAIL) {
-				return new Node(nx, ny);
-			}
-		}
-		return null;
-	}
-
-	static void init() throws IOException {
-		totalScore = 0;
-		String[] tokens = br.readLine().split(" ");
-		N = Integer.parseInt(tokens[0]);
-		M = Integer.parseInt(tokens[1]);
-		K = Integer.parseInt(tokens[2]);
-
-		map = new int[N][N];
-		teamList = new ArrayList<>();
-
-		for (int i = 0; i < N; i++) {
-			tokens = br.readLine().split(" ");
-			for (int j = 0; j < N; j++) {
-				map[i][j] = Integer.parseInt(tokens[j]);
-			}
-		}
-
-		// team 정보 입력 (bfs 활용)
-		findTeam();
-	}
-
-	private static void findTeam() {
-		boolean[][] visited = new boolean[N][N];
-		for (int i = 0; i < N; i++) {
-			for (int j = 0; j < N; j++) {
-				if (!visited[i][j] && map[i][j] == HEAD) {
-					List<People> members = findMembers(i, j, visited);
-					teamList.add(new Team(members));
-				}
-			}
-		}
-	}
-
-	static List<People> findMembers(int sx, int sy, boolean[][] visited) {
+    /** HEAD부터 PERSON → … → TAIL 순서대로 궤적을 따라가며 People 리스트 생성 */
+    static List<People> findMembers(int sx, int sy, boolean[][] visited) {
         List<People> members = new ArrayList<>();
         int x = sx, y = sy;
         members.add(new People(x, y));
@@ -246,49 +84,156 @@ public class Main {
         return members;
     }
 
-	static boolean inRange(int x, int y) {
-		return x >= 0 && x < N && y >= 0 && y < N;
-	}
+    /** K 라운드 동안 팀 이동 → 공 던지기 */
+    static void simulate() {
+        for (int round = 1; round <= K; round++) {
+            moveAllTeams();
+            totalScore += throwBall(round);
+        }
+    }
 
-	static class People {
-		Node point;
+    /** 모든 팀을 머리 기준으로 한 칸씩 이동 */
+    static void moveAllTeams() {
+        for (Team team : teamList) {
+            // 1) 새 머리 위치 찾기
+            People head = team.peoples.get(0);
+            Node newHead = findMovablePoint(head);
+            if (newHead == null) continue;
 
-		public People(int i, int j) {
-			super();
-			this.point = new Node(i, j);
-		}
+            // 2) 기존 위치 모두 ROAD 처리
+            for (People p : team.peoples) {
+                map[p.point.x][p.point.y] = ROAD;
+            }
 
-		@Override
-		public String toString() {
-			return "People [point=" + point +"]";
-		}
-	}
+            // 3) 이전 좌표 복사
+            Node[] prev = new Node[team.peoples.size()];
+            for (int i = 0; i < team.peoples.size(); i++) {
+                Node cur = team.peoples.get(i).point;
+                prev[i] = new Node(cur.x, cur.y);
+            }
 
-	static class Node {
-		int x, y;
+            // 4) 꼬리→몸통 순으로 따라가기
+            for (int i = team.peoples.size() - 1; i >= 1; i--) {
+                team.peoples.get(i).point = prev[i - 1];
+            }
+            // 5) 머리 이동
+            head.point = newHead;
 
-		public Node(int x, int y) {
-			this.x = x;
-			this.y = y;
-		}
+            // 6) HEAD, PERSON, TAIL 재마킹
+            for (int i = 0; i < team.peoples.size(); i++) {
+                People p = team.peoples.get(i);
+                if (i == 0) {
+                    map[p.point.x][p.point.y] = HEAD;
+                } else if (i == team.peoples.size() - 1) {
+                    map[p.point.x][p.point.y] = TAIL;
+                } else {
+                    map[p.point.x][p.point.y] = PERSON;
+                }
+            }
+        }
+    }
 
-		@Override
-		public String toString() {
-			return "Node [x=" + x + ", y=" + y + "]";
-		}
-	}
+    /** 머리가 이동할 수 있는 ROAD 또는 TAIL 칸을 상하좌우 탐색 */
+    static Node findMovablePoint(People head) {
+        for (int d = 0; d < 4; d++) {
+            int nx = head.point.x + dx[d];
+            int ny = head.point.y + dy[d];
+            if (!inRange(nx, ny)) continue;
+            if (map[nx][ny] == ROAD || map[nx][ny] == TAIL) {
+                return new Node(nx, ny);
+            }
+        }
+        return null;
+    }
 
-	static class Team {
-		List<People> peoples;
+    /** 공 던지기: 한 변 N칸씩, 4방향 순환 */ 
+    static int throwBall(int turn) {
+        int cycleLen = 4 * N;
+        int changed = (turn - 1) % cycleLen;
+        int dir   = changed / N;      // 0: →, 1: ↑, 2: ←, 3: ↓
+        int step  = changed % N;
 
-		public Team(List<People> peoples) {
-			super();
-			this.peoples = peoples;
-		}
+        int sx, sy, mx, my;
+        switch (dir) {
+            case 0: sx = step;     sy = 0;      mx = 0;  my = 1;  break;  // 아래→오른쪽
+            case 1: sx = N - 1;    sy = step;   mx = -1; my = 0;  break;  // 오른쪽→위
+            case 2: sx = N - 1 - step; sy = N - 1; mx = 0;  my = -1; break; // 위→왼쪽
+            default: sx = 0;       sy = N - 1 - step; mx = 1;  my = 0;  break; // 왼쪽→아래
+        }
 
-		@Override
-		public String toString() {
-			return "Team [peoples=" + peoples + "]";
-		}
-	}
+        int x = sx, y = sy;
+        while (inRange(x, y)) {
+            int v = map[x][y];
+            if (v == HEAD || v == PERSON || v == TAIL) {
+                return checkScore(x, y);
+            }
+            x += mx;
+            y += my;
+        }
+        return 0;
+    }
+
+    /** 맞힌 지점의 팀원을 찾아 점수 계산하고, 팀의 방향을 뒤집음 */
+    static int checkScore(int x, int y) {
+        // 해당 좌표가 속한 팀 찾기
+        Team hit = null;
+        for (Team team : teamList) {
+            for (People p : team.peoples) {
+                if (p.point.x == x && p.point.y == y) {
+                    hit = team;
+                    break;
+                }
+            }
+            if (hit != null) break;
+        }
+        if (hit == null) return 0;
+
+        // 몇 번째 사람인지 계산 (1-based)
+        int idx = 0;
+        for (int i = 0; i < hit.peoples.size(); i++) {
+            People p = hit.peoples.get(i);
+            if (p.point.x == x && p.point.y == y) {
+                idx = i + 1;
+                break;
+            }
+        }
+        int score = idx * idx;
+
+        // 팀 방향 뒤집기
+        Collections.reverse(hit.peoples);
+        // 맵에 새 HEAD/TAIL/몸통 마킹
+        for (int i = 0; i < hit.peoples.size(); i++) {
+            Node pt = hit.peoples.get(i).point;
+            if (i == 0) {
+                map[pt.x][pt.y] = HEAD;
+            } else if (i == hit.peoples.size() - 1) {
+                map[pt.x][pt.y] = TAIL;
+            } else {
+                map[pt.x][pt.y] = PERSON;
+            }
+        }
+        return score;
+    }
+
+    static boolean inRange(int x, int y) {
+        return x >= 0 && x < N && y >= 0 && y < N;
+    }
+
+    static class People {
+        Node point;
+        People(int x, int y) { this.point = new Node(x, y); }
+        @Override public String toString() {
+            return "("+ point.x +","+ point.y +")";
+        }
+    }
+
+    static class Node {
+        int x, y;
+        Node(int x, int y) { this.x = x; this.y = y; }
+    }
+
+    static class Team {
+        List<People> peoples;
+        Team(List<People> list) { this.peoples = list; }
+    }
 }
