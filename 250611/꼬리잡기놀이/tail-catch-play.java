@@ -77,6 +77,7 @@ public class Main {
         	if(!inRange(x,y)) break;	//격자밖을 벗어나면..
         	if(map[x][y] == HEAD || map[x][y] == PERSON || map[x][y] == TAIL) {	//사람과 부딪히면...
         		score = checkScore(x,y);
+        		System.out.println("맞은 사람 좌표 : " + new Node(x,y) + " 점수 : " + score);
         		break;
         	}
         	
@@ -229,44 +230,37 @@ public class Main {
 		for (int i = 0; i < N; i++) {
 			for (int j = 0; j < N; j++) {
 				if (!visited[i][j] && map[i][j] == HEAD) {
-					findMembers(i, j, visited);
+					List<People> members = findMembers(i, j, visited);
+					teamList.add(new Team(members));
 				}
 			}
 		}
 	}
 
-	private static void findMembers(int i, int j, boolean[][] visited) {
-		List<People> team = new ArrayList<>();
-		Queue<Node> queue = new ArrayDeque<>();
-		visited[i][j] = true;
-		queue.add(new Node(i, j));
+	static List<People> findMembers(int sx, int sy, boolean[][] visited) {
+        List<People> members = new ArrayList<>();
+        int x = sx, y = sy;
+        members.add(new People(x, y));
+        visited[x][y] = true;
 
-		while (!queue.isEmpty()) {
-			Node curNode = queue.poll();
-
-			int curValue = map[curNode.x][curNode.y];
-
-			if (curValue == HEAD || curValue == PERSON || curValue == TAIL) {
-				team.add(new People(curNode.x, curNode.y));
-			}
-
-			for (int d = 0; d < 4; d++) {
-				int nx = curNode.x + dx[d];
-				int ny = curNode.y + dy[d];
-
-				if (!inRange(nx, ny) || visited[nx][ny])
-					continue;
-
-				int newValue = map[nx][ny];
-
-				if (newValue == PERSON || newValue == TAIL) {
-					visited[nx][ny] = true;
-					queue.add(new Node(nx, ny));
-				}
-			}
-		}
-		teamList.add(new Team(team));
-	}
+        while (map[x][y] != TAIL) {
+            boolean moved = false;
+            for (int d = 0; d < 4; d++) {
+                int nx = x + dx[d], ny = y + dy[d];
+                if (!inRange(nx, ny) || visited[nx][ny]) continue;
+                int v = map[nx][ny];
+                if (v == PERSON || v == TAIL) {
+                    x = nx; y = ny;
+                    members.add(new People(x, y));
+                    visited[x][y] = true;
+                    moved = true;
+                    break;
+                }
+            }
+            if (!moved) break;  // 혹시 경로가 끊기면 멈춤
+        }
+        return members;
+    }
 
 	static boolean inRange(int x, int y) {
 		return x >= 0 && x < N && y >= 0 && y < N;
