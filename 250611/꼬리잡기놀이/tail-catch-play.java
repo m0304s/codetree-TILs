@@ -77,7 +77,6 @@ public class Main {
         	if(!inRange(x,y)) break;	//격자밖을 벗어나면..
         	if(map[x][y] == HEAD || map[x][y] == PERSON || map[x][y] == TAIL) {	//사람과 부딪히면...
         		score = checkScore(x,y);
-        		System.out.println("맞은 사람 좌표 : " + new Node(x,y) + " 점수 : " + score);
         		break;
         	}
         	
@@ -127,22 +126,7 @@ public class Main {
 		}
 		return null;
 	}
-
-	private static void debug() {
-		for (int i = 0; i < N; i++) {
-			for (int j = 0; j < N; j++) {
-				System.out.print(map[i][j] + " ");
-			}
-			System.out.println();
-		}
-
-		for (Team team : teamList) {
-			System.out.println(team);
-		}
-		
-		System.out.println("====================");
-	}
-
+	
 	/**
 	 * 각 팀은 머리사람을 따라서 한 칸 이동
 	 */
