@@ -1,237 +1,393 @@
-import java.io.*;
 import java.util.*;
+import java.io.*;
 
 public class Main {
-	static final int BLANK = 0, HEAD = 1, PERSON = 2, TAIL = 3, ROAD = 4;
+    static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
 
-	static int N, M, K;
-	static int[][] map;
-	static int totalScore;
-	static List<Team> teamList;
-	static int[] dx = { 0, 0, -1, 1 }; // 좌, 우, 상, 하
-	static int[] dy = { -1, 1, 0, 0 };
+    /**
+     * N*N 크기의 격자에서 꼬리잡기놀이 진행
+     * 3명 이상이 한 팀으로 구성
+     *
+     * 맨 앞에 있는 사람을 머리사람
+     * 맨 뒤에 있는 사람을 꼬리사람
+     *
+     * 각 팀은 주어진 이동 선을 따라서만 이동
+     * 각 팀의 이동선은 끝이 이어져있음
+     *
+     * 각 라운드 별 다음과 같이 진행
+     * 1. 머리사람을 따라서 한 칸 이동
+     * 2. 각 라운드마다 공이 정해진 선을 따라 던져짐
+     * 3. 공이 던져지는 경우에 해당 선에 사람이 있으면 최초에 만나게 되는 사람만이 공을 얻어 점수를 얻음
+     * 점수는 머리사람을 시작으로 팀 내에서 K번째 사람이라면 K의 제곱만큼 점수를 얻음
+     * 아무도 공을 받지 못하는 경우 점수를 획득하지 못함
+     *
+     * 입력
+     * 첫번째줄 격자의 크기(N), 팀의 개수(M), 라운드 수(K)
+     *
+     * N개의 줄에 걸쳐 초기 상태의 정보 (빈칸(0), 머리사람(1), 머리사람과 꼬리사람이 아닌 나머지(2), 꼬리사람(3), 이동선(4)
+     */
 
-	static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-	static BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
+    static final int BLANK = 0, HEAD = 1, REMAIN = 2, TAIL = 3, MOVABLE = 4;
 
-	public static void main(String[] args) throws IOException {
-		init();
-		simulate();
-		bw.write(totalScore + "\n");
-		bw.flush();
-		bw.close();
-		br.close();
-	}
+    static int N,M,K;
+    static int [][] map;
+    static ArrayList<Team> teamList;
 
-	static void init() throws IOException {
-		String[] tok = br.readLine().split(" ");
-		N = Integer.parseInt(tok[0]);
-		M = Integer.parseInt(tok[1]);
-		K = Integer.parseInt(tok[2]);
-		map = new int[N][N];
-		for (int i = 0; i < N; i++) {
-			tok = br.readLine().split(" ");
-			for (int j = 0; j < N; j++) {
-				map[i][j] = Integer.parseInt(tok[j]);
-			}
-		}
-		teamList = new ArrayList<>();
-		boolean[][] visited = new boolean[N][N];
-		for (int i = 0; i < N; i++) {
-			for (int j = 0; j < N; j++) {
-				if (map[i][j] == HEAD) {
-					teamList.add(findTeamInOrder(i, j, visited));
-				}
-			}
-		}
-	}
+    public static void main(String[] args) throws IOException {
+        init();
+        simulation();
+    }
 
-	static Team findTeamInOrder(int sx, int sy, boolean[][] visited) {
-		List<People> members = new ArrayList<>();
-		int currentX = sx;
-		int currentY = sy;
+    static void simulation() throws IOException{
+        int totalScore = 0;
+        for(int turn=1;turn<=K;turn++){
+            moveMembersPerTeam(turn);
+            int score = throwBall(turn);
+            totalScore += score;
+        }
+        bw.write(totalScore+"\n");
+        bw.flush();
+        bw.close();
+        br.close();
+    }
 
-		while (map[currentX][currentY] != BLANK && !visited[currentX][currentY]) {
-			visited[currentX][currentY] = true;
-			members.add(new People(currentX, currentY));
+    /**
+     * N: 격자의 한 변 크기
+     * turn: 1 이상인 자연수(몇 번째 턴인지)r
+     */
+    private static int throwBall(int turn) {
+        int changedTurn = (turn - 1) % (4 * N) + 1;
 
-			if (map[currentX][currentY] == TAIL)
-				break;
+        int dir  = (changedTurn - 1) / N;   // 0: 첫 구간, 1: 두 번째 구간, 2: 세 번째, 3: 네 번째
+        int step = (changedTurn - 1) % N;   // 해당 구간 안에서의 '몇 번째 턴인지' 0~(N-1)
 
-			for (int d = 0; d < 4; d++) {
-				int nx = currentX + dx[d];
-				int ny = currentY + dy[d];
+        // (3) 시작 좌표와 이동 방향 설정
+        int startX = 0, startY = 0;
+        int dx = 0, dy = 0;
 
-				if (!inRange(nx, ny) || map[nx][ny] == BLANK || map[nx][ny] == HEAD || visited[nx][ny])
-					continue;
+        switch (dir) {
+            case 0:
+                startX = step;
+                startY = 0;
+                dx = 0;
+                dy = 1;
+                break;
 
-				if (members.size() == 1 && map[nx][ny] != PERSON)
-					continue;
+            case 1:
+                startX = N - 1;
+                startY = step;
+                dx = -1;
+                dy = 0;
+                break;
 
-				currentX = nx;
-				currentY = ny;
-				break;
-			}
-		}
-		return new Team(members);
-	}
+            case 2:
+                startX = (N - 1) - step;
+                startY = N - 1;
+                dx = 0;
+                dy = -1;
+                break;
 
-	static void simulate() {
-		for (int turn = 1; turn <= K; turn++) {
-			moveTeams();
-			totalScore += throwBall(turn);
-		}
-	}
+            case 3:
+                startX = 0;
+                startY = (N - 1) - step;
+                dx = 1;
+                dy = 0;
+                break;
+        }
+        //시작좌표 : (startX,startY) 변화량 : (dx,dy);
+        while(true){
+            if(!inRange(startX,startY)) break;  //벽밖을 만나면 종료
 
-	static void moveTeams() {
-		List<List<Node>> allTeamsNewPositions = new ArrayList<>();
-		for (Team team : teamList) {
-			Node newHeadPos = findMovable(team);
+            Team catchedTeam = null;
+            Member catchedMember = isMemberIsAtPoint(startX,startY);
+            if(isMemberIsAtPoint(startX,startY) != null){   //사람을 만났을 경우
+                for(Team team : teamList){
+                    if(isContain(team,catchedMember)){
+                        catchedTeam = team;
+                        break;
+                    }
+                }
 
-			if (newHeadPos == null) {
-				List<Node> currentPositions = new ArrayList<>();
-				for (People p : team.peoples) {
-					currentPositions.add(p.point);
-				}
-				allTeamsNewPositions.add(currentPositions);
-			} else {
-				List<Node> newPositions = new ArrayList<>();
-				newPositions.add(newHeadPos);
-				for (int i = 0; i < team.peoples.size() - 1; i++) {
-					newPositions.add(team.peoples.get(i).point);
-				}
-				allTeamsNewPositions.add(newPositions);
-			}
-		}
+                if(catchedTeam != null){
+                    //그 팀을 반대로 전환, (머리 -> 꼬리, 꼬리 -> 머리, 각 팀원 num : team.members.size() - member.num
+                    // 1->3, 2->2, 3->1
+                    ArrayList<Member> newMembers = new ArrayList<>();
+                    for(Member member : catchedTeam.members) {
+                        int changedNum = catchedTeam.members.size() - member.num + 1;
+                        if(member.role == HEAD) {
+                            newMembers.add(new Member(changedNum,member.x,member.y, TAIL));
+                            map[member.x][member.y] = TAIL;
+                        }else if(member.role == TAIL){
+                            newMembers.add(new Member(changedNum,member.x,member.y, HEAD));
+                            map[member.x][member.y] = HEAD;
+                        }else {
+                            newMembers.add(new Member(changedNum,member.x,member.y, REMAIN));
+                        }
+                    }
+                    Collections.sort(newMembers, new Comparator<Member>() {
+                        @Override
+                        public int compare(Member o1, Member o2) {
+                            return o1.role - o2.role;
+                        }
+                    });
+                    catchedTeam.members = newMembers;
+                }
 
-		for (Team team : teamList) {
-			for (People p : team.peoples) {
-				map[p.point.x][p.point.y] = ROAD;
-			}
-		}
+                return getScore(catchedMember);
+            }
 
-		for (int i = 0; i < teamList.size(); i++) {
-			Team team = teamList.get(i);
-			List<Node> newPositions = allTeamsNewPositions.get(i);
+            startX += dx;
+            startY += dy;
+        }
+        return 0;
+    }
 
-			for (int j = 0; j < team.peoples.size(); j++) {
-				team.peoples.get(j).point = newPositions.get(j);
-				Node pt = team.peoples.get(j).point;
-				int marker = (j == 0) ? HEAD : (j == team.peoples.size() - 1) ? TAIL : PERSON;
-				map[pt.x][pt.y] = marker;
-			}
-		}
-	}
+    private static boolean isContain(Team team, Member catchedMember) {
+        for(Member member : team.members){
+            if(member.x == catchedMember.x && member.y == catchedMember.y && member.role == catchedMember.role && member.num == catchedMember.num) return true;
+        }
 
-	static Node findMovable(Team team) {
-		People head = team.peoples.get(0);
-		Node secondPersonPos = team.peoples.get(1).point;
-		for (int d = 0; d < 4; d++) {
-			int nx = head.point.x + dx[d];
-			int ny = head.point.y + dy[d];
-			if (!inRange(nx, ny))
-				continue;
-			if (nx == secondPersonPos.x && ny == secondPersonPos.y)
-				continue;
-			if (map[nx][ny] == ROAD || map[nx][ny] == TAIL) {
-				return new Node(nx, ny);
-			}
-		}
-		return null;
-	}
+        return false;
+    }
 
-	static int throwBall(int turn) {
-		int cycle = 4 * N;
-		int idx = (turn - 1) % cycle;
-		int dir = idx / N;
-		int step = idx % N;
-		int sx, sy, mx, my;
-		switch (dir) {
-		case 0:
-			sx = step;
-			sy = 0;
-			mx = 0;
-			my = 1;
-			break;
-		case 1:
-			sx = N - 1;
-			sy = step;
-			mx = -1;
-			my = 0;
-			break;
-		case 2:
-			sx = N - 1 - step;
-			sy = N - 1;
-			mx = 0;
-			my = -1;
-			break;
-		default:
-			sx = 0;
-			sy = N - 1 - step;
-			mx = 1;
-			my = 0;
-			break;
-		}
-		int x = sx, y = sy;
-		while (inRange(x, y)) {
-			if (map[x][y] >= HEAD && map[x][y] <= TAIL) {
-				return scoreHit(x, y);
-			}
-			x += mx;
-			y += my;
-		}
-		return 0;
-	}
+    /**
+     * 각 팀별로 팀원들의 위치를 이동시킴
+     */
+    private static void moveMembersPerTeam(int turn) {
+        for(Team team : teamList){
+            moveMembers(team, turn);
+        }
+    }
 
-	static int scoreHit(int x, int y) {
-		Team hitTeam = null;
-		for (Team t : teamList) {
-			if (t.peoples.stream().anyMatch(p -> p.point.x == x && p.point.y == y)) {
-				hitTeam = t;
-				break;
-			}
-		}
-		if (hitTeam == null)
-			return 0;
+    static void printMap(){
+        for(int i=0;i<N;i++){
+            for(int j=0;j<N;j++){
+                System.out.print(map[i][j] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println("=======================");
+    }
 
-		int position = 0;
-		for (int i = 0; i < hitTeam.peoples.size(); i++) {
-			if (hitTeam.peoples.get(i).point.x == x && hitTeam.peoples.get(i).point.y == y) {
-				position = i + 1;
-				break;
-			}
-		}
 
-		Collections.reverse(hitTeam.peoples);
-		return position * position;
-	}
+    static void moveMembers(Team team, int turn) {
+        int[] dx = {0, 0, -1, 1};
+        int[] dy = {-1, 1, 0, 0};
 
-	static boolean inRange(int x, int y) {
-		return x >= 0 && x < N && y >= 0 && y < N;
-	}
+        HashMap<Integer, Member> memberHashMap = new HashMap<>();
+        for (Member member : team.members) {
+            memberHashMap.put(member.num-1, new Member(member.num,member.x,member.y,member.role));
+            map[member.x][member.y] = MOVABLE;
+        }
 
-	static class People {
-		Node point;
+        Member head = team.members.get(0);
+        boolean headMoved = false;
+        ArrayList<Member> newMember = new ArrayList<>();
+        for (int d = 0; d < 4; d++) {
+            int nx = head.x + dx[d];
+            int ny = head.y + dy[d];
+            if (!inRange(nx, ny)) continue;
+            if (map[nx][ny] != MOVABLE || isMemberIsAtPoint(nx, ny) != null) continue;
 
-		People(int x, int y) {
-			this.point = new Node(x, y);
-		}
-	}
+            newMember.add(new Member(head.num,nx,ny,head.role));
+            map[nx][ny] = head.role;
+            headMoved = true;
+            break;
+        }
 
-	static class Node {
-		int x, y;
+        if (!headMoved) {
+            Member tail = findTail(team);
 
-		Node(int x, int y) {
-			this.x = x;
-			this.y = y;
-		}
-	}
+            newMember.add(new Member(head.num, tail.x, tail.y, head.role));
+            map[tail.x][tail.y] = head.role;
+        }
 
-	static class Team {
-		List<People> peoples;
+        Collections.sort(team.members, new Comparator<Member>() {
+            @Override
+            public int compare(Member o1, Member o2) {
+                return o1.num - o2.num;
+            }
+        });
+        for (int i = 1; i < team.members.size(); i++) {
+            Member member = team.members.get(i);
+            Member prevPos = memberHashMap.get(i - 1);
 
-		Team(List<People> p) {
-			this.peoples = p;
-		}
-	}
+            newMember.add(new Member(member.num, prevPos.x, prevPos.y, member.role));
+
+            map[prevPos.x][prevPos.y] = member.role;
+        }
+        team.members = newMember;
+    }
+
+    private static Member findTail(Team team) {
+        for(Member member : team.members){
+            if(member.role == TAIL) return member;
+        }
+        return null;
+    }
+
+    /**
+     * 목표로 하는 좌표에 사람이 존재하는지 체크
+     * @param x 좌표
+     * @param y 좌표
+     * @return 사람이 존재하면 그 사람 반환, 없으면 null
+     */
+    static Member isMemberIsAtPoint(int x,int y){
+        for(Team team : teamList){
+            for(Member member : team.members){
+                if(x == member.x && y == member.y){
+                    return member;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 머리사람 시작으로 팀내 K번째 사람
+     * return (K^2)
+     */
+    static int getScore(Member member){
+        return (int)Math.pow(member.num,2);
+    }
+
+    static void init() throws IOException{
+        String [] tokens = br.readLine().split(" ");
+        N = Integer.parseInt(tokens[0]);
+        M = Integer.parseInt(tokens[1]);
+        K = Integer.parseInt(tokens[2]);
+
+        map = new int[N][N];
+        for(int i=0;i<N;i++){
+            tokens = br.readLine().split(" ");
+            for(int j=0;j<N;j++){
+                map[i][j] = Integer.parseInt(tokens[j]);
+            }
+        }
+
+        findTeams();    //팀 검색
+    }
+
+    static void findTeams(){
+        teamList = new ArrayList<>();
+        for(int i=0;i<N;i++){
+            for(int j=0;j<N;j++){
+                if(map[i][j] == HEAD){
+                    Team team = bfsToFindTeam(i,j);
+                    teamList.add(team);
+                }
+            }
+        }
+    }
+
+    private static Team bfsToFindTeam(int x, int y) {
+        int[] dx = {0, 0, -1, 1};
+        int[] dy = {-1, 1, 0, 0};
+
+        ArrayList<Member> members = new ArrayList<>();
+        Queue<Point> queue = new ArrayDeque<>();
+        boolean[][] visited = new boolean[N][N];
+        queue.add(new Point(x, y));
+        visited[x][y] = true;
+
+        int num = 1;
+        while (!queue.isEmpty()) {
+            Point curNode = queue.poll();
+            int nodeValue = map[curNode.x][curNode.y];
+            // 팀 구성원(HEAD, REMAIN, TAIL)만 members에 추가
+            if (nodeValue == HEAD || nodeValue == REMAIN || nodeValue == TAIL) {
+                members.add(new Member(num++, curNode.x, curNode.y, nodeValue));
+            }
+
+            for (int d = 0; d < 4; d++) {
+                int nx = curNode.x + dx[d];
+                int ny = curNode.y + dy[d];
+
+                if (!inRange(nx, ny) || visited[nx][ny]) continue;
+                int newNodeValue = map[nx][ny];
+
+                if (nodeValue == HEAD) { // 1일 때: 반드시 2로 이어짐
+                    if (newNodeValue == REMAIN) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                } else if (nodeValue == REMAIN) { // 2일 때: 2 또는 3으로 이어짐
+                    if (newNodeValue == REMAIN || newNodeValue == TAIL) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                } else if (nodeValue == TAIL) { // 3일 때: 4 또는 1로 이어짐
+                    if (newNodeValue == MOVABLE || newNodeValue == HEAD) {
+                        queue.add(new Point(nx, ny));
+                        visited[nx][ny] = true;
+                    }
+                }
+            }
+        }
+
+        return new Team(members);
+    }
+
+    static boolean inRange(int x,int y){
+        return x >= 0 && x < N && y >= 0 && y < N;
+    }
+
+    static class Team{
+        ArrayList<Member> members;
+        HashSet<Member> memberSet;
+
+        public Team(ArrayList<Member> members) {
+            this.members = members;
+            this.memberSet = new HashSet<>(members);
+        }
+
+        @Override
+        public String toString() {
+            return "Team{" +
+                    "members=" + members +
+                    '}';
+        }
+    }
+
+    static class Point{
+        int x,y;
+
+        public Point(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public String toString() {
+            return "Point{" +
+                    "x=" + x +
+                    ", y=" + y +
+                    '}';
+        }
+    }
+
+    static class Member{
+        int x,y;
+        int role;
+        int num;
+
+
+        public Member(int num,int x, int y, int role) {
+            this.x = x;
+            this.y = y;
+            this.num = num;
+            this.role = role;
+        }
+
+        @Override
+        public String toString() {
+            return "Member{" +
+                    "x=" + x +
+                    ", y=" + y +
+                    ", role=" + role +
+                    ", num=" + num +
+                    '}';
+        }
+    }
 }
