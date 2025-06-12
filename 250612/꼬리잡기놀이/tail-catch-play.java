@@ -92,7 +92,7 @@ public class Main {
 				break;
 
 			Team catchedTeam = null;
-			Member catchedMember = isMemberAtPoint(startX, startY);
+			Member catchedMember = isMemberIsAtPoint(startX, startY);
 
 			if (catchedMember != null) {
 				for (Team team : teamList) {
@@ -146,59 +146,58 @@ public class Main {
 
 	private static void moveMembersPerTeam(int turn) {
 		for (Team team : teamList) {
-			moveMembers(team);
+			moveMembers(team,turn);
 		}
 	}
 
-	private static void moveMembers(Team team) {
-		int[] dx = { 0, 0, -1, 1 };
-		int[] dy = { -1, 1, 0, 0 };
+	static void moveMembers(Team team, int turn) {
+        int[] dx = {0, 0, -1, 1};
+        int[] dy = {-1, 1, 0, 0};
 
-		HashMap<Integer, Member> memberHashMap = new HashMap<>(); // 기존의 좌표 정보 저장
-		for (Member member : team.members) {
-			memberHashMap.put(member.num - 1, new Member(member.x, member.y, member.num, member.role));
-			map[member.x][member.y] = MOVABLE;
-		}
+        HashMap<Integer, Member> memberHashMap = new HashMap<>();
+        for (Member member : team.members) {
+            memberHashMap.put(member.num-1, new Member(member.x,member.y,member.num,member.role));
+            map[member.x][member.y] = MOVABLE;
+        }
 
-		Member head = team.members.get(0);
-		boolean headMoved = false;
-		ArrayList<Member> newMember = new ArrayList<>();
-		for (int d = 0; d < 4; d++) {
-			int nx = head.x + dx[d];
-			int ny = head.y + dy[d];
+        Member head = team.members.get(0);
+        boolean headMoved = false;
+        ArrayList<Member> newMember = new ArrayList<>();
+        for (int d = 0; d < 4; d++) {
+            int nx = head.x + dx[d];
+            int ny = head.y + dy[d];
+            if (!inRange(nx, ny)) continue;
+            if (map[nx][ny] != MOVABLE || isMemberIsAtPoint(nx, ny) != null) continue;
 
-			if (!inRange(nx, ny))
-				continue;
-			if (map[nx][ny] != MOVABLE || isMemberAtPoint(nx, ny) != null)
-				continue;
+            newMember.add(new Member(nx,ny,head.num,head.role));
+            map[nx][ny] = head.role;
+            headMoved = true;
+            break;
+        }
 
-			newMember.add(new Member(nx, ny, head.num, head.role));
-			map[nx][ny] = head.role;
-			headMoved = true;
-			break;
-		}
+        if (!headMoved) {
+            Member tail = findTail(team);
 
-		if (!headMoved) {
-			Member tail = findTail(team);
-			newMember.add(new Member(tail.x, tail.y, head.num, head.role));
-		}
+            newMember.add(new Member(tail.x, tail.y,head.num,head.role));
+            map[tail.x][tail.y] = head.role;
+        }
 
-		Collections.sort(team.members, new Comparator<Member>() {
-			public int compare(Member o1, Member o2) {
-				return o1.num - o2.num;
-			}
-		});
+        Collections.sort(team.members, new Comparator<Member>() {
+            @Override
+            public int compare(Member o1, Member o2) {
+                return o1.num - o2.num;
+            }
+        });
+        for (int i = 1; i < team.members.size(); i++) {
+            Member member = team.members.get(i);
+            Member prevPos = memberHashMap.get(i - 1);
 
-		for (int i = 1; i < team.members.size(); i++) {
-			Member member = team.members.get(i);
-			Member prevPos = memberHashMap.get(i - 1);
+            newMember.add(new Member(prevPos.x, prevPos.y, member.num, member.role));
 
-			newMember.add(new Member(prevPos.x, prevPos.y, member.num, member.role));
-			map[prevPos.x][prevPos.y] = member.role;
-		}
-
-		team.members = newMember;
-	}
+            map[prevPos.x][prevPos.y] = member.role;
+        }
+        team.members = newMember;
+    }
 
 	private static Member findTail(Team team) {
 		for (Member member : team.members) {
@@ -208,16 +207,22 @@ public class Main {
 		return null;
 	}
 
-	static Member isMemberAtPoint(int x, int y) {
-		for (Team team : teamList) {
-			for (Member member : team.members) {
-				if (member.x == x && member.y == y)
-					return member;
-			}
-		}
-
-		return null;
-	}
+	/**
+     * 목표로 하는 좌표에 사람이 존재하는지 체크
+     * @param x 좌표
+     * @param y 좌표
+     * @return 사람이 존재하면 그 사람 반환, 없으면 null
+     */
+    static Member isMemberIsAtPoint(int x,int y){
+        for(Team team : teamList){
+            for(Member member : team.members){
+                if(x == member.x && y == member.y){
+                    return member;
+                }
+            }
+        }
+        return null;
+    }
 
 	static void printTeamInfo() {
 		for (Team team : teamList) {
@@ -283,8 +288,8 @@ public class Main {
 
 				int newNodeValue = map[nx][ny];
 
-				if (nodeValue == HEAD) { // 1일때 :2또는 3으로 이어짐
-					if (newNodeValue == REMAIN || newNodeValue == TAIL) {
+				if (nodeValue == HEAD) { // 1일때 :2로 이어짐
+					if (newNodeValue == REMAIN) {
 						queue.add(new Point(nx, ny));
 						visited[nx][ny] = true;
 					}
