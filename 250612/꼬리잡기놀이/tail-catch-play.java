@@ -8,7 +8,7 @@ public class Main {
 	static int[][] map;
 	static int totalScore;
 	static List<Team> teamList;
-	static int[] dx = { 0, 0, -1, 1 };
+	static int[] dx = { 0, 0, -1, 1 }; // 좌, 우, 상, 하
 	static int[] dy = { -1, 1, 0, 0 };
 
 	static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -40,51 +40,43 @@ public class Main {
 		for (int i = 0; i < N; i++) {
 			for (int j = 0; j < N; j++) {
 				if (map[i][j] == HEAD) {
-					teamList.add(findTeam(i, j, visited));
+					teamList.add(findTeamInOrder(i, j, visited));
 				}
 			}
 		}
 	}
 
-	static Team findTeam(int sx, int sy, boolean[][] visited) {
+	static Team findTeamInOrder(int sx, int sy, boolean[][] visited) {
 		List<People> members = new ArrayList<>();
-		Queue<int[]> q = new LinkedList<>();
+		int currentX = sx;
+		int currentY = sy;
 
-		visited[sx][sy] = true;
-		q.add(new int[] { sx, sy });
-		members.add(new People(sx, sy));
+		while (map[currentX][currentY] != BLANK && !visited[currentX][currentY]) {
+			visited[currentX][currentY] = true;
+			members.add(new People(currentX, currentY));
 
-		while (!q.isEmpty()) {
-			int[] curr = q.poll();
-
-			// 꼬리면 종료
-			if (map[curr[0]][curr[1]] == TAIL && members.size() > 1)
+			if (map[currentX][currentY] == TAIL)
 				break;
 
 			for (int d = 0; d < 4; d++) {
-				int nx = curr[0] + dx[d];
-				int ny = curr[1] + dy[d];
+				int nx = currentX + dx[d];
+				int ny = currentY + dy[d];
 
-				if (!inRange(nx, ny) || visited[nx][ny])
+				if (!inRange(nx, ny) || map[nx][ny] == BLANK || map[nx][ny] == HEAD || visited[nx][ny])
 					continue;
 
-				// 머리사람(1) 바로 옆은 몸통(2)이어야 함
 				if (members.size() == 1 && map[nx][ny] != PERSON)
 					continue;
 
-				// 몸통, 꼬리를 찾으면 멤버에 추가
-				if (map[nx][ny] == PERSON || map[nx][ny] == TAIL) {
-					visited[nx][ny] = true;
-					q.add(new int[] { nx, ny });
-					members.add(new People(nx, ny));
-				}
+				currentX = nx;
+				currentY = ny;
+				break;
 			}
 		}
 		return new Team(members);
 	}
 
 	static void simulate() {
-		totalScore = 0;
 		for (int turn = 1; turn <= K; turn++) {
 			moveTeams();
 			totalScore += throwBall(turn);
@@ -94,15 +86,22 @@ public class Main {
 	static void moveTeams() {
 		List<List<Node>> allTeamsNewPositions = new ArrayList<>();
 		for (Team team : teamList) {
-			List<Node> newPositions = new ArrayList<>();
 			Node newHeadPos = findMovable(team);
 
-			// 팀의 새로운 좌표 리스트 생성
-			newPositions.add(newHeadPos);
-			for (int i = 0; i < team.peoples.size() - 1; i++) {
-				newPositions.add(team.peoples.get(i).point);
+			if (newHeadPos == null) {
+				List<Node> currentPositions = new ArrayList<>();
+				for (People p : team.peoples) {
+					currentPositions.add(p.point);
+				}
+				allTeamsNewPositions.add(currentPositions);
+			} else {
+				List<Node> newPositions = new ArrayList<>();
+				newPositions.add(newHeadPos);
+				for (int i = 0; i < team.peoples.size() - 1; i++) {
+					newPositions.add(team.peoples.get(i).point);
+				}
+				allTeamsNewPositions.add(newPositions);
 			}
-			allTeamsNewPositions.add(newPositions);
 		}
 
 		for (Team team : teamList) {
@@ -116,10 +115,7 @@ public class Main {
 			List<Node> newPositions = allTeamsNewPositions.get(i);
 
 			for (int j = 0; j < team.peoples.size(); j++) {
-				// 팀 내부 좌표 정보 업데이트
 				team.peoples.get(j).point = newPositions.get(j);
-
-				// 맵에 새로운 위치 그리기
 				Node pt = team.peoples.get(j).point;
 				int marker = (j == 0) ? HEAD : (j == team.peoples.size() - 1) ? TAIL : PERSON;
 				map[pt.x][pt.y] = marker;
@@ -131,7 +127,8 @@ public class Main {
 		People head = team.peoples.get(0);
 		Node secondPersonPos = team.peoples.get(1).point;
 		for (int d = 0; d < 4; d++) {
-			int nx = head.point.x + dx[d], ny = head.point.y + dy[d];
+			int nx = head.point.x + dx[d];
+			int ny = head.point.y + dy[d];
 			if (!inRange(nx, ny))
 				continue;
 			if (nx == secondPersonPos.x && ny == secondPersonPos.y)
@@ -177,8 +174,7 @@ public class Main {
 		}
 		int x = sx, y = sy;
 		while (inRange(x, y)) {
-			int v = map[x][y];
-			if (v >= HEAD && v <= TAIL) {
+			if (map[x][y] >= HEAD && map[x][y] <= TAIL) {
 				return scoreHit(x, y);
 			}
 			x += mx;
@@ -190,17 +186,14 @@ public class Main {
 	static int scoreHit(int x, int y) {
 		Team hitTeam = null;
 		for (Team t : teamList) {
-			for (People p : t.peoples) {
-				if (p.point.x == x && p.point.y == y) {
-					hitTeam = t;
-					break;
-				}
-			}
-			if (hitTeam != null)
+			if (t.peoples.stream().anyMatch(p -> p.point.x == x && p.point.y == y)) {
+				hitTeam = t;
 				break;
+			}
 		}
 		if (hitTeam == null)
 			return 0;
+
 		int position = 0;
 		for (int i = 0; i < hitTeam.peoples.size(); i++) {
 			if (hitTeam.peoples.get(i).point.x == x && hitTeam.peoples.get(i).point.y == y) {
@@ -208,16 +201,9 @@ public class Main {
 				break;
 			}
 		}
-		int score = position * position;
-		Collections.reverse(hitTeam.peoples);
 
-		// 맵 업데이트
-		for (int i = 0; i < hitTeam.peoples.size(); i++) {
-			Node pt = hitTeam.peoples.get(i).point;
-			int marker = (i == 0) ? HEAD : (i == hitTeam.peoples.size() - 1) ? TAIL : PERSON;
-			map[pt.x][pt.y] = marker;
-		}
-		return score;
+		Collections.reverse(hitTeam.peoples);
+		return position * position;
 	}
 
 	static boolean inRange(int x, int y) {
